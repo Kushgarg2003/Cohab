@@ -9,6 +9,24 @@ const api = axios.create({
   }
 })
 
+// Attach JWT token to every request automatically
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+export const authAPI = {
+  googleLogin: async (idToken) => {
+    const response = await api.post('/api/auth/google', { id_token: idToken })
+    return response.data.data
+  },
+  getMe: async () => {
+    const response = await api.get('/api/auth/me')
+    return response.data.data
+  }
+}
+
 export const surveyAPI = {
   // Get all survey questions
   getQuestions: async () => {

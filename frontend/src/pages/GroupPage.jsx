@@ -21,7 +21,7 @@ const Topbar = ({ backTo, backLabel }) => {
   const navigate = useNavigate()
   return (
     <div style={S.topbar}>
-      <span style={S.logo}>NO<span style={{ color: 'var(--primary)' }}>broker</span></span>
+      <span style={S.logo}>Co<span style={{ color: 'var(--primary)' }}>hab</span></span>
       <button onClick={() => navigate(backTo)} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
         ← {backLabel}
       </button>

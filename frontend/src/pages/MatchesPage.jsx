@@ -131,7 +131,7 @@ export default function MatchesPage() {
       {/* Header */}
       <div style={{ background: 'var(--white)', borderBottom: '1px solid var(--border)', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
         <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>
-          NO<span style={{ color: 'var(--primary)' }}>broker</span>
+          Co<span style={{ color: 'var(--primary)' }}>hab</span>
         </span>
         <button onClick={() => navigate('/survey')} style={S.textBtn}>Edit survey</button>
       </div>

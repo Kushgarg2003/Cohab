@@ -1,8 +1,28 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { GoogleLogin } from '@react-oauth/google'
+import { authAPI } from '../api'
 
 export default function LandingPage() {
   const navigate = useNavigate()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  const handleSuccess = async (credentialResponse) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await authAPI.googleLogin(credentialResponse.credential)
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('userId', data.user_id)
+      if (data.name) localStorage.setItem('userName', data.name)
+      if (data.picture) localStorage.setItem('userPicture', data.picture)
+      navigate(data.survey_completed ? '/matches' : '/survey')
+    } catch {
+      setError('Sign-in failed. Please try again.')
+      setLoading(false)
+    }
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
@@ -10,14 +30,13 @@ export default function LandingPage() {
       {/* Nav */}
       <nav style={{ padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.5 }}>
-          NO<span style={{ color: 'var(--primary)' }}>broker</span>
+          Co<span style={{ color: 'var(--primary)' }}>hab</span>
         </span>
-        <button
-          onClick={() => navigate('/survey')}
-          style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontWeight: 600, cursor: 'pointer', fontSize: 14 }}
-        >
-          Already started? Continue →
-        </button>
+        {localStorage.getItem('token') && (
+          <button onClick={() => navigate('/survey')} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontWeight: 600, cursor: 'pointer', fontSize: 14 }}>
+            Continue →
+          </button>
+        )}
       </nav>
 
       {/* Hero */}
@@ -52,41 +71,42 @@ export default function LandingPage() {
           Get matched with people who share your vibe — not just your budget.
         </p>
 
-        <button
-          onClick={() => navigate('/survey')}
-          style={{
-            background: 'var(--primary)', color: 'white', border: 'none',
-            padding: '16px 44px', borderRadius: 12, fontSize: 17,
-            fontWeight: 700, cursor: 'pointer', letterSpacing: -0.3,
-            boxShadow: '0 4px 16px rgba(232,72,28,0.3)',
-            transition: 'transform 0.15s, box-shadow 0.15s'
-          }}
-          onMouseEnter={e => { e.target.style.transform = 'translateY(-1px)'; e.target.style.boxShadow = '0 6px 20px rgba(232,72,28,0.35)' }}
-          onMouseLeave={e => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = '0 4px 16px rgba(232,72,28,0.3)' }}
-        >
-          Get matched free →
-        </button>
-        <p style={{ marginTop: 14, fontSize: 13, color: 'var(--text-3)' }}>No login needed. Takes about 5 minutes.</p>
+        {loading ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-2)', fontWeight: 500 }}>
+            <div style={{ width: 20, height: 20, border: '2px solid var(--border)', borderTop: '2px solid var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            Signing you in…
+          </div>
+        ) : (
+          <GoogleLogin
+            onSuccess={handleSuccess}
+            onError={() => setError('Google sign-in was cancelled or failed.')}
+            useOneTap
+            text="continue_with"
+            shape="rectangular"
+            size="large"
+            theme="outline"
+          />
+        )}
+
+        {error && <p style={{ color: 'var(--red)', fontSize: 14, fontWeight: 500, marginTop: 16 }}>{error}</p>}
+        <p style={{ marginTop: 16, fontSize: 13, color: 'var(--text-3)' }}>Takes about 5 minutes. No broker fees ever.</p>
       </div>
 
-      {/* Feature row */}
+      {/* Stats */}
       <div style={{
-        borderTop: '1px solid var(--border)',
-        padding: '32px 24px',
+        borderTop: '1px solid var(--border)', padding: '32px 24px',
         display: 'flex', justifyContent: 'center',
         gap: 'clamp(24px, 6vw, 64px)', flexWrap: 'wrap'
       }}>
-        {[
-          ['100pt', 'compatibility score'],
-          ['4 sections', 'logistics → lifestyle'],
-          ['0 fees', 'no broker ever'],
-        ].map(([val, label]) => (
+        {[['100pt', 'compatibility score'], ['4 sections', 'logistics → lifestyle'], ['0 fees', 'no broker ever']].map(([val, label]) => (
           <div key={label} style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{val}</div>
             <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2, fontWeight: 500 }}>{label}</div>
           </div>
         ))}
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }

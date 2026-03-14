@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.database import engine, Base, settings
-from app.routes import survey, users, matching, groups
+from app.routes import survey, users, matching, groups, auth
 from app.models import LifestyleTag, LifestyleCategory
 
 # Initialize database tables
@@ -111,6 +111,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth.router)
 app.include_router(survey.router)
 app.include_router(users.router)
 app.include_router(matching.router)

@@ -53,6 +53,9 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     survey_completed = Column(Boolean, default=False)
     name = Column(String(100), nullable=True)
+    google_id = Column(String(255), unique=True, nullable=True)
+    email = Column(String(255), unique=True, nullable=True)
+    picture = Column(String(500), nullable=True)
 
     # Relationships
     survey_response = relationship("SurveyResponse", back_populates="user", uselist=False, cascade="all, delete-orphan")

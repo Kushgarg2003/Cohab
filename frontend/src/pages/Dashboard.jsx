@@ -63,6 +63,11 @@ export default function Dashboard() {
       try {
         setLoading(true)
         let userId = localStorage.getItem('userId') || survey.userId
+        // If not authenticated at all, redirect to landing
+        if (!userId && !localStorage.getItem('token')) {
+          navigate('/')
+          return
+        }
         if (!userId) {
           const userData = await surveyAPI.createUser()
           userId = userData.user_id
@@ -163,7 +168,7 @@ export default function Dashboard() {
       {/* Top bar */}
       <div style={{ borderBottom: '1px solid var(--border)', background: 'var(--white)', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
         <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.3 }}>
-          NO<span style={{ color: 'var(--primary)' }}>broker</span>
+          Co<span style={{ color: 'var(--primary)' }}>hab</span>
         </span>
         <div style={{ display: 'flex', gap: 6 }}>
           {STEPS.map((s, i) => (
