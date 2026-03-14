@@ -154,7 +154,7 @@ export default function MatchesPage() {
           <div style={{ background: 'var(--white)', borderRadius: 'var(--radius)', padding: 48, textAlign: 'center', border: '1px solid var(--border)', marginBottom: 32 }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
             <h3 style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>No matches yet</h3>
-            <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Share NObroker with friends to get matched.</p>
+            <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Share Cohab with friends to get matched.</p>
           </div>
         )}
 
