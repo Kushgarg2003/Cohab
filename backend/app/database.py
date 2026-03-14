@@ -18,9 +18,12 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
+# Render gives postgresql:// but SQLAlchemy needs postgresql+psycopg2://
+db_url = settings.DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+
 # Create engine with connection pooling
 engine = create_engine(
-    settings.DATABASE_URL,
+    db_url,
     poolclass=QueuePool,
     pool_size=10,
     max_overflow=20,
