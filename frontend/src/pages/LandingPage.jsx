@@ -44,8 +44,24 @@ export default function LandingPage() {
         flex: 1, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         padding: '60px 24px', textAlign: 'center',
-        animation: 'fadeIn 0.5s ease'
+        animation: 'fadeIn 0.5s ease',
+        position: 'relative', overflow: 'hidden'
       }}>
+        {/* Background video */}
+        <video autoPlay loop muted playsInline style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          objectFit: 'cover', zIndex: 0
+        }}>
+          <source src="/roommates.mp4" type="video/mp4" />
+        </video>
+        {/* Overlay to fade video and keep content readable */}
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 1,
+          background: 'rgba(248, 248, 250, 0.4)',
+          backdropFilter: 'blur(1px)'
+        }} />
+        {/* Content above video */}
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <div style={{
           fontSize: 12, fontWeight: 700, color: 'var(--primary)',
           letterSpacing: 2.5, marginBottom: 24, textTransform: 'uppercase',
@@ -58,14 +74,16 @@ export default function LandingPage() {
         <h1 style={{
           fontSize: 'clamp(36px, 7vw, 62px)', fontWeight: 800,
           lineHeight: 1.1, color: 'var(--text)', marginBottom: 24,
-          letterSpacing: -2, maxWidth: 680
+          letterSpacing: -2, maxWidth: 680,
+          textShadow: '0 1px 8px rgba(255,255,255,0.8)'
         }}>
           Find roommates<br />you'll actually like.
         </h1>
 
         <p style={{
-          fontSize: 18, color: 'var(--text-2)', lineHeight: 1.7,
-          marginBottom: 44, maxWidth: 420
+          fontSize: 18, color: 'var(--text)', lineHeight: 1.7,
+          marginBottom: 44, maxWidth: 420,
+          textShadow: '0 1px 6px rgba(255,255,255,0.9)'
         }}>
           Answer a few honest questions about how you live.
           Get matched with people who share your vibe — not just your budget.
@@ -89,7 +107,8 @@ export default function LandingPage() {
         )}
 
         {error && <p style={{ color: 'var(--red)', fontSize: 14, fontWeight: 500, marginTop: 16 }}>{error}</p>}
-        <p style={{ marginTop: 16, fontSize: 13, color: 'var(--text-3)' }}>Takes about 5 minutes. No broker fees ever.</p>
+        <p style={{ marginTop: 16, fontSize: 13, color: 'var(--text)', fontWeight: 600, textShadow: '0 1px 6px rgba(255,255,255,0.9)' }}>Takes about 5 minutes. No broker fees ever.</p>
+        </div>
       </div>
 
       {/* Stats */}
