@@ -5,24 +5,29 @@ import App from './App'
 const globalStyles = `
   :root {
     --primary: #E8481C;
-    --primary-light: #FEF0EC;
-    --primary-hover: #D03D14;
-    --bg: #FFFBF8;
-    --white: #FFFFFF;
-    --text: #1A1206;
-    --text-2: #6B6560;
-    --text-3: #A89F96;
-    --border: #EAE6E1;
-    --shadow-sm: 0 1px 3px rgba(26,18,6,0.06), 0 2px 8px rgba(26,18,6,0.04);
-    --shadow-md: 0 2px 8px rgba(26,18,6,0.06), 0 8px 24px rgba(26,18,6,0.06);
-    --radius: 14px;
-    --radius-sm: 8px;
-    --green: #16A34A;
-    --green-light: #F0FDF4;
-    --amber: #D97706;
-    --amber-light: #FFFBEB;
-    --red: #DC2626;
-    --red-light: #FEF2F2;
+    --primary-light: rgba(232,72,28,0.12);
+    --primary-hover: #FF5A2C;
+    --bg: #0C0C10;
+    --surface: #16161D;
+    --surface-2: #1F1F28;
+    --white: #16161D;
+    --text: #EEEEF5;
+    --text-2: #8A8AA0;
+    --text-3: #4A4A60;
+    --border: #26263200;
+    --border: #262632;
+    --border-2: #34344400;
+    --border-2: #343444;
+    --shadow-sm: 0 1px 4px rgba(0,0,0,0.5);
+    --shadow-md: 0 4px 24px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4);
+    --radius: 16px;
+    --radius-sm: 10px;
+    --green: #22C55E;
+    --green-light: rgba(34,197,94,0.12);
+    --amber: #F59E0B;
+    --amber-light: rgba(245,158,11,0.12);
+    --red: #EF4444;
+    --red-light: rgba(239,68,68,0.12);
   }
 
   * {
@@ -42,14 +47,14 @@ const globalStyles = `
   button { font-family: inherit; }
   input, textarea { font-family: inherit; }
 
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 `
 
 const style = document.createElement('style')

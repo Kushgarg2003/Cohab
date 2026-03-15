@@ -1,20 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { chatAPI, groupsAPI } from '../api'
-
-const AVATAR_COLORS = ['#E8481C', '#7C3AED', '#0D9488', '#D97706', '#2563EB', '#DC2626', '#059669']
-const avatarColor = (id) => AVATAR_COLORS[(id?.charCodeAt(0) || 0) % AVATAR_COLORS.length]
-
-function Avatar({ userId, name, size = 32 }) {
-  const initials = name
-    ? name.trim().split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-    : (userId ? userId.slice(0, 2).toUpperCase() : '??')
-  return (
-    <div style={{ width: size, height: size, borderRadius: '50%', background: avatarColor(userId), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.35, fontWeight: 800, color: 'white', flexShrink: 0 }}>
-      {initials}
-    </div>
-  )
-}
+import Avatar from '../components/Avatar'
 
 function formatTime(isoString) {
   const date = new Date(isoString)
@@ -115,55 +102,49 @@ export default function ChatPage() {
   }))
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f9fafb' }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
 
       {/* Header */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-        <button onClick={() => navigate(`/group/${groupId}`)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#6b7280', padding: 4 }}>←</button>
+      <div style={{ background: 'rgba(12,12,16,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+        <button onClick={() => navigate(`/group/${groupId}`)} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', width: 34, height: 34, borderRadius: 10, cursor: 'pointer', color: 'var(--text-2)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>←</button>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>{groupName}</div>
-          <div style={{ fontSize: 12, color: '#9ca3af', fontWeight: 500 }}>Group chat</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>{groupName}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500 }}>Group chat · updates every 3s</div>
         </div>
       </div>
 
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 2 }}>
         {grouped.length === 0 && (
-          <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: 14, marginTop: 60 }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>💬</div>
-            <p>No messages yet. Say hello!</p>
+          <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 14, marginTop: 80 }}>
+            <div style={{ fontSize: 44, marginBottom: 12 }}>💬</div>
+            <p style={{ fontWeight: 600 }}>No messages yet. Say hello!</p>
           </div>
         )}
 
         {grouped.map((msg, i) => (
-          <div key={msg.id} style={{ display: 'flex', flexDirection: msg.isMe ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 8, marginTop: msg.showAvatar && i > 0 ? 12 : 2 }}>
-            {/* Avatar */}
+          <div key={msg.id} style={{ display: 'flex', flexDirection: msg.isMe ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 8, marginTop: msg.showAvatar && i > 0 ? 14 : 2 }}>
             {!msg.isMe && (
               <div style={{ width: 32, flexShrink: 0 }}>
                 {msg.showAvatar && <Avatar userId={msg.sender_id} name={msg.sender_name} size={32} />}
               </div>
             )}
-
-            <div style={{ maxWidth: '70%', display: 'flex', flexDirection: 'column', alignItems: msg.isMe ? 'flex-end' : 'flex-start' }}>
+            <div style={{ maxWidth: '72%', display: 'flex', flexDirection: 'column', alignItems: msg.isMe ? 'flex-end' : 'flex-start' }}>
               {msg.showName && !msg.isMe && (
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 3, marginLeft: 2 }}>{msg.sender_name}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', marginBottom: 4, marginLeft: 2 }}>{msg.sender_name}</span>
               )}
               <div style={{
-                background: msg.isMe ? '#111827' : 'white',
-                color: msg.isMe ? 'white' : '#111827',
+                background: msg.isMe ? 'var(--primary)' : 'var(--surface)',
+                color: 'var(--text)',
                 padding: '10px 14px',
                 borderRadius: msg.isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                fontSize: 14,
-                lineHeight: 1.5,
-                boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                border: msg.isMe ? 'none' : '1px solid #e5e7eb',
-                wordBreak: 'break-word',
-                whiteSpace: 'pre-wrap'
+                fontSize: 14, lineHeight: 1.55,
+                border: `1px solid ${msg.isMe ? 'transparent' : 'var(--border)'}`,
+                wordBreak: 'break-word', whiteSpace: 'pre-wrap'
               }}>
                 {msg.content}
               </div>
-              <span style={{ fontSize: 10, color: '#d1d5db', marginTop: 3, marginLeft: 2, marginRight: 2 }}>
+              <span style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 4, marginLeft: 2, marginRight: 2 }}>
                 {formatTime(msg.created_at)}
               </span>
             </div>
@@ -173,7 +154,7 @@ export default function ChatPage() {
       </div>
 
       {/* Input */}
-      <div style={{ background: 'white', borderTop: '1px solid #e5e7eb', padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'flex-end', flexShrink: 0 }}>
+      <div style={{ background: 'rgba(12,12,16,0.95)', backdropFilter: 'blur(20px)', borderTop: '1px solid var(--border)', padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'flex-end', flexShrink: 0 }}>
         <textarea
           ref={inputRef}
           value={input}
@@ -182,9 +163,9 @@ export default function ChatPage() {
           placeholder="Type a message… (Enter to send)"
           rows={1}
           style={{
-            flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '10px 14px',
+            flex: 1, border: '1px solid var(--border-2)', borderRadius: 12, padding: '10px 14px',
             fontSize: 14, fontFamily: 'inherit', resize: 'none', outline: 'none',
-            maxHeight: 120, lineHeight: 1.5, background: '#f9fafb', color: '#111827'
+            maxHeight: 120, lineHeight: 1.5, background: 'var(--surface-2)', color: 'var(--text)'
           }}
           onInput={e => {
             e.target.style.height = 'auto'
@@ -196,8 +177,8 @@ export default function ChatPage() {
           disabled={!input.trim() || sending}
           style={{
             width: 42, height: 42, borderRadius: '50%', border: 'none', flexShrink: 0,
-            background: input.trim() ? '#111827' : '#e5e7eb',
-            color: input.trim() ? 'white' : '#9ca3af',
+            background: input.trim() ? 'var(--primary)' : 'var(--surface-2)',
+            color: input.trim() ? 'white' : 'var(--text-3)',
             fontSize: 18, cursor: input.trim() ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'background 0.2s'
@@ -209,7 +190,7 @@ export default function ChatPage() {
 }
 
 const S = {
-  centered: { height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 },
-  spinner: { width: 32, height: 32, border: '3px solid #e5e7eb', borderTop: '3px solid #E8481C', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
-  btnOutline: { background: 'transparent', color: '#374151', border: '1.5px solid #e5e7eb', padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
+  centered: { height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, background: 'var(--bg)' },
+  spinner: { width: 32, height: 32, border: '2px solid var(--border)', borderTop: '2px solid var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
+  btnOutline: { background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border-2)', padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
 }

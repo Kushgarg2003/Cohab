@@ -1,108 +1,105 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { swipesAPI, groupsAPI } from '../api'
+import Avatar from '../components/Avatar'
+import BottomNav from '../components/BottomNav'
 
-const SCORE_COLOR = (s) => s >= 70 ? '#10b981' : s >= 45 ? '#f59e0b' : '#ef4444'
+const SCORE_COLOR = (s) => s >= 70 ? '#22C55E' : s >= 45 ? '#F59E0B' : '#EF4444'
 const SCORE_LABEL = (s) => s >= 70 ? 'Great match' : s >= 45 ? 'Decent match' : 'Low match'
-const AVATAR_COLORS = ['#E8481C', '#7C3AED', '#0D9488', '#D97706', '#2563EB', '#DC2626', '#059669']
-const avatarColor = (id) => AVATAR_COLORS[(id?.charCodeAt(0) || 0) % AVATAR_COLORS.length]
-
-function Avatar({ userId, name, size = 72 }) {
-  const initials = name
-    ? name.trim().split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-    : (userId ? userId.slice(0, 2).toUpperCase() : '??')
-  return (
-    <div style={{ width: size, height: size, borderRadius: '50%', background: avatarColor(userId), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.32, fontWeight: 800, color: 'white', flexShrink: 0 }}>
-      {initials}
-    </div>
-  )
-}
 
 function ScoreRing({ score }) {
   const color = SCORE_COLOR(score)
-  const r = 32, circ = 2 * Math.PI * r
+  const r = 28, circ = 2 * Math.PI * r
   const offset = circ - (score / 100) * circ
   return (
-    <div style={{ position: 'relative', width: 76, height: 76 }}>
-      <svg width="76" height="76" style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx="38" cy="38" r={r} fill="none" stroke="#e5e7eb" strokeWidth="6" />
-        <circle cx="38" cy="38" r={r} fill="none" stroke={color} strokeWidth="6"
+    <div style={{ position: 'relative', width: 68, height: 68, flexShrink: 0 }}>
+      <svg width="68" height="68" style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx="34" cy="34" r={r} fill="none" stroke="var(--border)" strokeWidth="5" />
+        <circle cx="34" cy="34" r={r} fill="none" stroke={color} strokeWidth="5"
           strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
+          style={{ transition: 'stroke-dashoffset 0.6s ease' }} />
       </svg>
       <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontSize: 18, fontWeight: 800, color, lineHeight: 1 }}>{Math.round(score)}</span>
-        <span style={{ fontSize: 9, color: '#9ca3af', fontWeight: 600 }}>/ 100</span>
+        <span style={{ fontSize: 16, fontWeight: 800, color, lineHeight: 1 }}>{Math.round(score)}</span>
       </div>
     </div>
   )
 }
 
-function Tag({ label }) {
-  return (
-    <span style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20, background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb' }}>
-      {label.replace(/_/g, ' ')}
-    </span>
-  )
-}
-
-function SwipeCard({ person, onLike, onPass, isTop }) {
+function SwipeCard({ person, isTop }) {
   const snap = person.survey_snapshot || {}
-  const tags = [...(snap.social_battery || []), ...(snap.habits || []), ...(snap.work_study || [])].slice(0, 5)
+  const tags = [...(snap.social_battery || []), ...(snap.habits || []), ...(snap.work_study || [])].slice(0, 4)
   const score = person.score
 
   return (
     <div style={{
-      background: 'white', borderRadius: 20, padding: 28,
-      boxShadow: isTop ? '0 20px 60px rgba(0,0,0,0.15)' : '0 4px 20px rgba(0,0,0,0.07)',
-      border: '1px solid #e5e7eb',
-      transform: isTop ? 'scale(1)' : 'scale(0.96)',
-      transition: 'transform 0.3s ease',
-      width: '100%', maxWidth: 420
+      background: 'var(--surface)',
+      borderRadius: 24,
+      border: `1px solid ${isTop ? 'var(--border-2)' : 'var(--border)'}`,
+      boxShadow: isTop ? '0 24px 64px rgba(0,0,0,0.7)' : '0 4px 16px rgba(0,0,0,0.4)',
+      transform: isTop ? 'scale(1)' : 'scale(0.95)',
+      transition: 'all 0.3s ease',
+      width: '100%', maxWidth: 440,
+      overflow: 'hidden'
     }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-        <Avatar userId={person.user_id} name={person.name} size={72} />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: '#111827', marginBottom: 4 }}>
-            {person.name || 'Anonymous'}
+      {/* Score banner */}
+      <div style={{ background: `linear-gradient(135deg, ${SCORE_COLOR(score)}18 0%, transparent 60%)`, borderBottom: '1px solid var(--border)', padding: '20px 24px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <Avatar userId={person.user_id} name={person.name} size={52} />
+          <div>
+            <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.3 }}>{person.name || 'Anonymous'}</div>
+            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, background: SCORE_COLOR(score) + '20', color: SCORE_COLOR(score), letterSpacing: 0.3 }}>
+              {SCORE_LABEL(score)}
+            </span>
           </div>
-          <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: SCORE_COLOR(score) + '18', color: SCORE_COLOR(score) }}>
-            {SCORE_LABEL(score)}
-          </span>
         </div>
         <ScoreRing score={score} />
       </div>
 
-      {/* Score breakdown bar */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', gap: 3, height: 6, borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
-          <div style={{ flex: person.breakdown?.hard_constraints || 0, background: '#6366f1', borderRadius: 2 }} />
-          <div style={{ flex: person.breakdown?.dealbreakers || 0, background: '#f59e0b', borderRadius: 2 }} />
-          <div style={{ flex: person.breakdown?.lifestyle || 0, background: '#10b981', borderRadius: 2 }} />
-          <div style={{ flex: Math.max(0, 100 - score), background: '#e5e7eb', borderRadius: 2 }} />
+      <div style={{ padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Score bar */}
+        <div>
+          <div style={{ display: 'flex', gap: 3, height: 5, borderRadius: 3, overflow: 'hidden', marginBottom: 7 }}>
+            <div style={{ flex: person.breakdown?.hard_constraints || 0, background: '#6366f1' }} />
+            <div style={{ flex: person.breakdown?.dealbreakers || 0, background: 'var(--amber)' }} />
+            <div style={{ flex: person.breakdown?.lifestyle || 0, background: 'var(--green)' }} />
+            <div style={{ flex: Math.max(0, 100 - score), background: 'var(--border-2)' }} />
+          </div>
+          <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-3)', fontWeight: 600 }}>
+            <span><span style={{ color: '#6366f1' }}>■</span> Logistics {person.breakdown?.hard_constraints ?? 0}</span>
+            <span><span style={{ color: 'var(--amber)' }}>■</span> Dealbreakers {person.breakdown?.dealbreakers ?? 0}</span>
+            <span><span style={{ color: 'var(--green)' }}>■</span> Lifestyle {person.breakdown?.lifestyle ?? 0}</span>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 10, fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>
-          <span><span style={{ color: '#6366f1' }}>■</span> Logistics {person.breakdown?.hard_constraints ?? 0}pt</span>
-          <span><span style={{ color: '#f59e0b' }}>■</span> Dealbreakers {person.breakdown?.dealbreakers ?? 0}pt</span>
-          <span><span style={{ color: '#10b981' }}>■</span> Lifestyle {person.breakdown?.lifestyle ?? 0}pt</span>
-        </div>
-      </div>
 
-      {/* Key info */}
-      <div style={{ background: '#f9fafb', borderRadius: 12, padding: '12px 14px', marginBottom: 16, fontSize: 13, color: '#374151', fontWeight: 500, lineHeight: 1.8 }}>
-        {snap.budget_range && <div>💰 Budget: <strong>{snap.budget_range}</strong></div>}
-        {snap.locations?.length > 0 && <div>📍 Locations: <strong>{snap.locations.join(', ')}</strong></div>}
-        {snap.move_in_timeline && <div>📅 Move-in: <strong>{snap.move_in_timeline}</strong></div>}
-        {snap.occupancy_type && <div>🏠 Room type: <strong>{snap.occupancy_type}</strong></div>}
-      </div>
-
-      {/* Lifestyle tags */}
-      {tags.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {tags.map(t => <Tag key={t} label={t} />)}
+        {/* Key info */}
+        <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, border: '1px solid var(--border)' }}>
+          {snap.budget_range && <Row icon="💰" label="Budget" value={snap.budget_range} />}
+          {snap.locations?.length > 0 && <Row icon="📍" label="Areas" value={snap.locations.join(', ')} />}
+          {snap.move_in_timeline && <Row icon="📅" label="Move-in" value={snap.move_in_timeline} />}
+          {snap.occupancy_type && <Row icon="🏠" label="Room" value={snap.occupancy_type} />}
         </div>
-      )}
+
+        {/* Tags */}
+        {tags.length > 0 && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {tags.map(t => (
+              <span key={t} style={{ fontSize: 12, fontWeight: 600, padding: '5px 11px', borderRadius: 20, background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>
+                {t.replace(/_/g, ' ')}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function Row({ icon, label, value }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <span style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 500 }}>{icon} {label}</span>
+      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)' }}>{value}</span>
     </div>
   )
 }
@@ -110,27 +107,24 @@ function SwipeCard({ person, onLike, onPass, isTop }) {
 function MatchModal({ match, onClose }) {
   const navigate = useNavigate()
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }}>
-      <div style={{ background: 'white', borderRadius: 24, padding: 40, textAlign: 'center', maxWidth: 360, width: '100%', boxShadow: '0 40px 80px rgba(0,0,0,0.3)' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }}>
+      <div style={{ background: 'var(--surface)', borderRadius: 28, padding: 40, textAlign: 'center', maxWidth: 360, width: '100%', boxShadow: '0 40px 80px rgba(0,0,0,0.8)', border: '1px solid var(--border-2)', animation: 'slideUp 0.4s ease' }}>
         <div style={{ fontSize: 56, marginBottom: 8 }}>🎉</div>
-        <h2 style={{ fontSize: 26, fontWeight: 800, color: '#111827', marginBottom: 8 }}>It's a Match!</h2>
-        <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 28 }}>
-          You and <strong>{match.name || 'your match'}</strong> both liked each other.<br />A group has been created for you!
+        <h2 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', marginBottom: 8, letterSpacing: -0.5 }}>It's a Match!</h2>
+        <p style={{ color: 'var(--text-2)', fontSize: 14, marginBottom: 28, lineHeight: 1.6 }}>
+          You and <strong style={{ color: 'var(--text)' }}>{match.name || 'your match'}</strong> both liked each other. A group chat has been created!
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <button
-            onClick={() => navigate(`/group/${match.group_id}/chat`)}
-            style={{ background: '#111827', color: 'white', border: 'none', padding: '14px 24px', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+          <button onClick={() => navigate(`/group/${match.group_id}/chat`)}
+            style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '14px', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
             💬 Start chatting →
           </button>
-          <button
-            onClick={() => navigate(`/group/${match.group_id}`)}
-            style={{ background: 'transparent', color: '#374151', border: '1.5px solid #e5e7eb', padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={() => navigate(`/group/${match.group_id}`)}
+            style={{ background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border-2)', padding: '12px', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
             View Group
           </button>
-          <button
-            onClick={onClose}
-            style={{ background: 'transparent', color: '#9ca3af', border: 'none', padding: '8px', borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={onClose}
+            style={{ background: 'none', color: 'var(--text-3)', border: 'none', padding: '8px', fontSize: 13, cursor: 'pointer' }}>
             Keep Swiping
           </button>
         </div>
@@ -149,7 +143,7 @@ export default function MatchesPage() {
   const [matchModal, setMatchModal] = useState(null)
   const [isRevisit, setIsRevisit] = useState(false)
   const [swiping, setSwiping] = useState(false)
-  const [myGroups, setMyGroups] = useState([])
+  const [swipeDir, setSwipeDir] = useState(null) // 'like' | 'pass' for animation
   const userId = localStorage.getItem('userId')
 
   useEffect(() => {
@@ -157,12 +151,10 @@ export default function MatchesPage() {
     Promise.all([
       swipesAPI.getQueue(userId),
       swipesAPI.getMatches(userId),
-      groupsAPI.getMyGroups(userId).catch(() => ({ groups: [] }))
-    ]).then(([q, m, g]) => {
+    ]).then(([q, m]) => {
       setQueue(q.queue || [])
       setIsRevisit(q.is_revisit || false)
       setMutualMatches(m.matches || [])
-      setMyGroups(g.groups || [])
       setLoading(false)
     }).catch(err => { setError(err.message); setLoading(false) })
   }, [userId])
@@ -171,20 +163,24 @@ export default function MatchesPage() {
     if (swiping || currentIndex >= queue.length) return
     const person = queue[currentIndex]
     setSwiping(true)
+    setSwipeDir(action)
     try {
       const result = await swipesAPI.swipe(userId, person.user_id, action)
       if (result.mutual_match) {
         setMatchModal({ name: person.name, group_id: result.group_id })
         setMutualMatches(prev => [...prev, { user_id: person.user_id, name: person.name, group_id: result.group_id }])
       }
-      setCurrentIndex(i => i + 1)
+      setTimeout(() => {
+        setCurrentIndex(i => i + 1)
+        setSwipeDir(null)
+        setSwiping(false)
+      }, 200)
     } catch (e) {
-      console.error(e)
+      setSwiping(false)
+      setSwipeDir(null)
     }
-    setSwiping(false)
   }, [swiping, currentIndex, queue, userId])
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e) => {
       if (e.key === 'ArrowLeft') handleSwipe('pass')
@@ -197,13 +193,13 @@ export default function MatchesPage() {
   if (loading) return (
     <div style={S.centered}>
       <div style={S.spinner} />
-      <p style={{ color: '#6b7280', marginTop: 16, fontWeight: 500 }}>Finding your matches…</p>
+      <p style={{ color: 'var(--text-3)', marginTop: 16, fontSize: 14 }}>Finding your matches…</p>
     </div>
   )
 
   if (error) return (
     <div style={S.centered}>
-      <p style={{ color: '#ef4444', marginBottom: 16 }}>{error}</p>
+      <p style={{ color: 'var(--red)', marginBottom: 16, fontSize: 14 }}>{error}</p>
       <button onClick={() => navigate('/survey')} style={S.btnPrimary}>← Back to survey</button>
     </div>
   )
@@ -213,59 +209,80 @@ export default function MatchesPage() {
   const exhausted = currentIndex >= queue.length
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: 80 }}>
       {matchModal && <MatchModal match={matchModal} onClose={() => setMatchModal(null)} />}
 
       {/* Header */}
-      <div style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
-        <span style={{ fontSize: 16, fontWeight: 800, color: '#111827' }}>
-          Co<span style={{ color: '#E8481C' }}>hab</span>
+      <div style={{ background: 'rgba(12,12,16,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
+        <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.5 }}>
+          Co<span style={{ color: 'var(--primary)' }}>hab</span>
         </span>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {mutualMatches.length > 0 && (
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#10b981' }}>
-              🎉 {mutualMatches.length} match{mutualMatches.length > 1 ? 'es' : ''}
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)', background: 'var(--green-light)', padding: '4px 10px', borderRadius: 20 }}>
+              🎉 {mutualMatches.length} matched
             </span>
           )}
-          <button onClick={() => navigate('/survey')} style={S.textBtn}>Edit survey</button>
         </div>
       </div>
 
-      <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 16px 80px' }}>
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '24px 16px' }}>
 
         {/* Progress */}
         {queue.length > 0 && (
-          <div style={{ marginBottom: 20, textAlign: 'center' }}>
-            <p style={{ fontSize: 13, color: '#9ca3af', fontWeight: 500 }}>
-              {isRevisit ? '🔄 Revisiting passed users' : `${Math.min(currentIndex + 1, queue.length)} of ${queue.length}`}
-            </p>
-            <div style={{ height: 3, background: '#e5e7eb', borderRadius: 2, marginTop: 8 }}>
-              <div style={{ height: '100%', background: '#E8481C', borderRadius: 2, width: `${(currentIndex / queue.length) * 100}%`, transition: 'width 0.3s ease' }} />
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 600 }}>
+                {isRevisit ? '🔄 Revisiting passes' : `${Math.min(currentIndex + 1, queue.length)} of ${queue.length}`}
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 600 }}>
+                {queue.length - currentIndex} left
+              </span>
+            </div>
+            <div style={{ height: 3, background: 'var(--border)', borderRadius: 2 }}>
+              <div style={{ height: '100%', background: 'var(--primary)', borderRadius: 2, width: `${(currentIndex / Math.max(queue.length, 1)) * 100}%`, transition: 'width 0.4s ease' }} />
             </div>
           </div>
         )}
 
         {/* Card stack */}
         {!exhausted ? (
-          <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
-            {/* Next card (behind) */}
-            {next && (
-              <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 420, pointerEvents: 'none' }}>
-                <SwipeCard person={next} isTop={false} />
+          <>
+            <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
+              {next && (
+                <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 440, pointerEvents: 'none' }}>
+                  <SwipeCard person={next} isTop={false} />
+                </div>
+              )}
+              <div style={{
+                position: 'relative', width: '100%', maxWidth: 440, zIndex: 2,
+                transform: swipeDir === 'like' ? 'translateX(60px) rotate(6deg) scale(0.96)' : swipeDir === 'pass' ? 'translateX(-60px) rotate(-6deg) scale(0.96)' : 'none',
+                opacity: swipeDir ? 0.7 : 1,
+                transition: swipeDir ? 'all 0.2s ease' : 'none'
+              }}>
+                <SwipeCard person={current} isTop={true} />
               </div>
-            )}
-            {/* Current card */}
-            <div style={{ position: 'relative', width: '100%', maxWidth: 420, zIndex: 2 }}>
-              <SwipeCard person={current} isTop={true} />
             </div>
-          </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20, marginBottom: 16 }}>
+              <button onClick={() => handleSwipe('pass')} disabled={swiping} title="Pass (←)"
+                style={{ width: 60, height: 60, borderRadius: '50%', border: '1.5px solid var(--border-2)', background: 'var(--surface)', color: '#EF4444', fontSize: 22, cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.3)', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                ✕
+              </button>
+              <button onClick={() => handleSwipe('like')} disabled={swiping} title="Like (→)"
+                style={{ width: 72, height: 72, borderRadius: '50%', border: '1.5px solid rgba(232,72,28,0.3)', background: 'var(--primary)', color: 'white', fontSize: 26, cursor: 'pointer', boxShadow: '0 8px 24px rgba(232,72,28,0.4)', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                ♥
+              </button>
+              <div style={{ width: 60, height: 60 }} /> {/* spacer for balance */}
+            </div>
+            <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-3)', marginBottom: 32 }}>← → arrow keys also work</p>
+          </>
         ) : (
-          <div style={{ background: 'white', borderRadius: 20, padding: 48, textAlign: 'center', border: '1px solid #e5e7eb', marginBottom: 32 }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-            <h3 style={{ fontWeight: 800, color: '#111827', marginBottom: 8 }}>You've seen everyone!</h3>
-            <p style={{ color: '#9ca3af', fontSize: 14 }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 24, padding: 48, textAlign: 'center', border: '1px solid var(--border)', marginBottom: 32, animation: 'fadeIn 0.4s ease' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+            <h3 style={{ fontWeight: 800, color: 'var(--text)', marginBottom: 8, fontSize: 20 }}>You've seen everyone!</h3>
+            <p style={{ color: 'var(--text-2)', fontSize: 14, lineHeight: 1.6 }}>
               {mutualMatches.length > 0
                 ? `You have ${mutualMatches.length} mutual match${mutualMatches.length > 1 ? 'es' : ''}. Check your groups!`
                 : 'Share Cohab with friends to get more matches.'}
@@ -273,69 +290,37 @@ export default function MatchesPage() {
           </div>
         )}
 
-        {/* Action buttons */}
-        {!exhausted && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 32 }}>
-            <button
-              onClick={() => handleSwipe('pass')}
-              disabled={swiping}
-              style={{ width: 64, height: 64, borderRadius: '50%', border: '2px solid #fca5a5', background: 'white', fontSize: 26, cursor: 'pointer', boxShadow: '0 4px 12px rgba(239,68,68,0.15)', transition: 'transform 0.1s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              title="Pass (←)"
-            >✗</button>
-            <button
-              onClick={() => handleSwipe('like')}
-              disabled={swiping}
-              style={{ width: 64, height: 64, borderRadius: '50%', border: '2px solid #6ee7b7', background: 'white', fontSize: 26, cursor: 'pointer', boxShadow: '0 4px 12px rgba(16,185,129,0.15)', transition: 'transform 0.1s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              title="Like (→)"
-            >♥</button>
-          </div>
-        )}
-
-        <p style={{ textAlign: 'center', fontSize: 12, color: '#d1d5db', marginBottom: 32 }}>Use ← → arrow keys to swipe</p>
-
-        {/* Mutual matches list */}
+        {/* Mutual matches */}
         {mutualMatches.length > 0 && (
-          <div style={{ background: 'white', borderRadius: 16, padding: 20, border: '1px solid #e5e7eb', marginBottom: 16 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', marginBottom: 14, textTransform: 'uppercase', letterSpacing: 1 }}>Your Matches</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 16, padding: 20, border: '1px solid var(--border)', marginBottom: 12 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 16, textTransform: 'uppercase', letterSpacing: 1.5 }}>Your Matches</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {mutualMatches.map(m => (
                 <div key={m.user_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Avatar userId={m.user_id} name={m.name} size={36} />
-                    <span style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>{m.name || 'Anonymous'}</span>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{m.name || 'Anonymous'}</span>
                   </div>
                   {m.group_id && (
-                    <button onClick={() => navigate(`/group/${m.group_id}`)} style={S.btnSmall}>View group →</button>
+                    <button onClick={() => navigate(`/group/${m.group_id}/chat`)}
+                      style={{ background: 'var(--primary-light)', color: 'var(--primary)', border: '1px solid rgba(232,72,28,0.2)', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                      💬 Chat
+                    </button>
                   )}
                 </div>
               ))}
             </div>
           </div>
         )}
-
-        {/* Groups */}
-        <div style={{ background: 'white', borderRadius: 16, padding: 20, border: '1px solid #e5e7eb' }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', marginBottom: 14, textTransform: 'uppercase', letterSpacing: 1 }}>Groups</p>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button onClick={() => navigate('/group/new')} style={S.btnPrimary}>+ Create group</button>
-            <button onClick={() => navigate('/group/join')} style={S.btnOutline}>Join group</button>
-            {myGroups.map(g => (
-              <button key={g.group_id} onClick={() => navigate(`/group/${g.group_id}`)} style={S.btnOutline}>
-                🏠 {g.name}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
+
+      <BottomNav />
     </div>
   )
 }
 
 const S = {
-  centered: { minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f9fafb', padding: 24 },
-  spinner: { width: 36, height: 36, border: '3px solid #e5e7eb', borderTop: '3px solid #E8481C', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
-  btnPrimary: { background: '#111827', color: 'white', border: 'none', padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' },
-  btnOutline: { background: 'transparent', color: '#374151', border: '1.5px solid #e5e7eb', padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
-  btnSmall: { background: '#f3f4f6', color: '#374151', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' },
-  textBtn: { background: 'none', border: 'none', color: '#6b7280', fontSize: 14, fontWeight: 600, cursor: 'pointer' },
+  centered: { minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', padding: 24 },
+  spinner: { width: 32, height: 32, border: '2px solid var(--border)', borderTop: '2px solid var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
+  btnPrimary: { background: 'var(--primary)', color: 'white', border: 'none', padding: '12px 24px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' },
 }

@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { groupsAPI } from '../api'
+import BottomNav from '../components/BottomNav'
+import Avatar from '../components/Avatar'
 
 const S = {
-  page: { minHeight: '100vh', background: 'var(--bg)' },
-  topbar: { background: 'var(--white)', borderBottom: '1px solid var(--border)', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 },
-  logo: { fontSize: 16, fontWeight: 800, color: 'var(--text)' },
-  body: { maxWidth: 580, margin: '0 auto', padding: '32px 16px 80px' },
-  card: { background: 'var(--white)', borderRadius: 'var(--radius)', padding: 28, border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' },
+  page: { minHeight: '100vh', background: 'var(--bg)', paddingBottom: 80 },
+  topbar: { background: 'rgba(12,12,16,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 },
+  logo: { fontSize: 17, fontWeight: 800, color: 'var(--text)' },
+  body: { maxWidth: 580, margin: '0 auto', padding: '28px 16px 80px' },
+  card: { background: 'var(--surface)', borderRadius: 'var(--radius)', padding: 24, border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' },
   h1: { fontSize: 24, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.5, marginBottom: 6 },
   sub: { fontSize: 14, color: 'var(--text-2)', fontWeight: 500, marginBottom: 24 },
-  input: { width: '100%', padding: '13px 16px', borderRadius: 'var(--radius-sm)', border: '2px solid var(--border)', fontSize: 15, outline: 'none', boxSizing: 'border-box', marginBottom: 16, color: 'var(--text)', background: 'var(--white)', fontFamily: 'inherit' },
+  input: { width: '100%', padding: '13px 16px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-2)', fontSize: 15, outline: 'none', boxSizing: 'border-box', marginBottom: 16, color: 'var(--text)', background: 'var(--surface-2)', fontFamily: 'inherit' },
   btnPrimary: { background: 'var(--primary)', color: 'white', border: 'none', padding: '13px 24px', borderRadius: 'var(--radius-sm)', fontSize: 15, fontWeight: 700, cursor: 'pointer' },
-  btnOutline: { background: 'transparent', color: 'var(--text-2)', border: '2px solid var(--border)', padding: '13px 20px', borderRadius: 'var(--radius-sm)', fontSize: 15, fontWeight: 600, cursor: 'pointer' },
+  btnOutline: { background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border-2)', padding: '13px 20px', borderRadius: 'var(--radius-sm)', fontSize: 15, fontWeight: 600, cursor: 'pointer' },
   backBtn: { background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 24 },
   label: { fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 },
 }
@@ -170,9 +172,7 @@ export function GroupDashboardPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {group.members.map((m, i) => (
               <div key={m.user_id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'var(--primary)', fontSize: 13 }}>
-                  {m.user_id.slice(0, 2).toUpperCase()}
-                </div>
+                <Avatar userId={m.user_id} name={m.name} size={38} />
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontWeight: 700, color: 'var(--text)', fontSize: 14 }}>
@@ -188,14 +188,15 @@ export function GroupDashboardPage() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <button onClick={() => navigate(`/group/${groupId}/chat`)} style={{ ...S.btnPrimary, width: '100%', padding: '14px', fontSize: 16 }}>
+          <button onClick={() => navigate(`/group/${groupId}/chat`)} style={{ ...S.btnPrimary, width: '100%', padding: '14px', fontSize: 15 }}>
             💬 Group chat →
           </button>
-          <button onClick={() => navigate(`/group/${groupId}/wishlist`)} style={{ ...S.btnOutline, width: '100%', padding: '14px', fontSize: 16 }}>
-            View property wishlist →
+          <button onClick={() => navigate(`/group/${groupId}/wishlist`)} style={{ ...S.btnOutline, width: '100%', padding: '14px', fontSize: 15 }}>
+            🏠 Property wishlist →
           </button>
         </div>
       </div>
+      <BottomNav />
     </div>
   )
 }
