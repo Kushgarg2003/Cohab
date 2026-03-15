@@ -131,6 +131,41 @@ class MatchScore(Base):
         return f"<MatchScore(user_a={self.user_a_id}, user_b={self.user_b_id}, score={self.score})>"
 
 
+# ========== Swipes & Mutual Matches ==========
+
+class SwipeAction(str, enum.Enum):
+    LIKE = "like"
+    PASS = "pass"
+
+
+class UserSwipe(Base):
+    __tablename__ = "user_swipes"
+    __table_args__ = (UniqueConstraint("swiper_id", "target_id", name="uq_swipe_pair"),)
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    swiper_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    target_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    action = Column(SQLEnum(SwipeAction), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    swiper = relationship("User", foreign_keys=[swiper_id])
+    target = relationship("User", foreign_keys=[target_id])
+
+
+class MutualMatch(Base):
+    __tablename__ = "mutual_matches"
+    __table_args__ = (UniqueConstraint("user_a_id", "user_b_id", name="uq_mutual_pair"),)
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_a_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    user_b_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    group_id = Column(UUID(as_uuid=True), ForeignKey("groups.id"), nullable=True)
+    matched_at = Column(DateTime, default=datetime.utcnow)
+
+    user_a = relationship("User", foreign_keys=[user_a_id])
+    user_b = relationship("User", foreign_keys=[user_b_id])
+
+
 # ========== Phase 2: Groups ==========
 
 class GroupStatus(str, enum.Enum):

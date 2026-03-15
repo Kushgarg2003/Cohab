@@ -160,4 +160,19 @@ export const matchingAPI = {
   }
 }
 
+export const swipesAPI = {
+  getQueue: async (userId) => {
+    const response = await api.get(`/api/swipes/${userId}/queue`)
+    return response.data.data
+  },
+  swipe: async (userId, targetId, action) => {
+    const response = await api.post(`/api/swipes/${userId}`, { target_id: targetId, action })
+    return response.data.data
+  },
+  getMatches: async (userId) => {
+    const response = await api.get(`/api/swipes/${userId}/matches`)
+    return response.data.data
+  }
+}
+
 export default api

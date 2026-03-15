@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.database import engine, Base, settings
-from app.routes import survey, users, matching, groups, auth, admin
+from app.routes import survey, users, matching, groups, auth, admin, swipes
 from app.models import LifestyleTag, LifestyleCategory
 
 # Initialize database tables
@@ -117,6 +117,7 @@ app.include_router(users.router)
 app.include_router(matching.router)
 app.include_router(groups.router)
 app.include_router(admin.router)
+app.include_router(swipes.router)
 
 # Health check
 @app.get("/health")
