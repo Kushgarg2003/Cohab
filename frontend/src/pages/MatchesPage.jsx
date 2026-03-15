@@ -45,7 +45,7 @@ function SwipeCard({ person, isTop }) {
       {/* Score banner */}
       <div style={{ background: `linear-gradient(135deg, ${SCORE_COLOR(score)}18 0%, transparent 60%)`, borderBottom: '1px solid var(--border)', padding: '20px 24px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <Avatar userId={person.user_id} name={person.name} size={52} />
+          <Avatar userId={person.user_id} name={person.name} picture={person.picture} size={52} />
           <div>
             <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.3 }}>{person.name || 'Anonymous'}</div>
             <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, background: SCORE_COLOR(score) + '20', color: SCORE_COLOR(score), letterSpacing: 0.3 }}>
@@ -168,7 +168,7 @@ export default function MatchesPage() {
       const result = await swipesAPI.swipe(userId, person.user_id, action)
       if (result.mutual_match) {
         setMatchModal({ name: person.name, group_id: result.group_id })
-        setMutualMatches(prev => [...prev, { user_id: person.user_id, name: person.name, group_id: result.group_id }])
+        setMutualMatches(prev => [...prev, { user_id: person.user_id, name: person.name, picture: person.picture, group_id: result.group_id }])
       }
       setTimeout(() => {
         setCurrentIndex(i => i + 1)
@@ -302,7 +302,7 @@ export default function MatchesPage() {
               {mutualMatches.map(m => (
                 <div key={m.user_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <Avatar userId={m.user_id} name={m.name} size={36} />
+                    <Avatar userId={m.user_id} name={m.name} picture={m.picture} size={36} />
                     <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{m.name || 'Anonymous'}</span>
                   </div>
                   {m.group_id && (

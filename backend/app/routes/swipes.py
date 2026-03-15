@@ -81,6 +81,7 @@ def get_swipe_queue(user_id: UUID, db: Session = Depends(get_db)):
         queue.append({
             "user_id": str(other.id),
             "name": other.name,
+            "picture": other.picture,
             "score": score,
             "breakdown": match.breakdown if match else {},
             "survey_snapshot": {

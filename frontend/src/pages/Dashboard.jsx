@@ -90,7 +90,38 @@ export default function Dashboard() {
 
         const questions = await surveyAPI.getQuestions()
         survey.setAllQuestions(questions)
-        survey.loadFromLocalStorage(userId)
+
+        // Pre-fill from backend if survey already has data
+        const profile = await surveyAPI.getUserProfile(userId).catch(() => null)
+        if (profile?.survey) {
+          const s = profile.survey
+          if (s.budget_range || s.locations?.length) {
+            survey.setMandatoryData({
+              budget_range: s.budget_range || null,
+              locations: s.locations || [],
+              move_in_timeline: s.move_in_timeline || null,
+              occupancy_type: s.occupancy_type || null,
+            })
+          }
+          if (s.social_battery?.length || s.habits?.length || s.work_study?.length) {
+            survey.setLifestyleTags({
+              social_battery: s.social_battery || [],
+              habits: s.habits || [],
+              work_study: s.work_study || [],
+            })
+          }
+          if (s.pets || s.smoking || s.dietary || s.gender) {
+            survey.setDealbreakers({ pets: s.pets, smoking: s.smoking, dietary: s.dietary, gender: s.gender })
+          }
+          if (s.deep_dive_responses && Object.keys(s.deep_dive_responses).length) {
+            Object.entries(s.deep_dive_responses).forEach(([prompt, response]) => {
+              survey.setDeepDiveResponse(prompt, response)
+            })
+          }
+        } else {
+          survey.loadFromLocalStorage(userId)
+        }
+
         const hasName = !!localStorage.getItem('userName')
         survey.setCurrentStep(hasName ? 'mandatory' : 'name')
         setLoading(false)
