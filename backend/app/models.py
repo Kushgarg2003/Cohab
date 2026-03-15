@@ -166,6 +166,20 @@ class MutualMatch(Base):
     user_b = relationship("User", foreign_keys=[user_b_id])
 
 
+# ========== Chat ==========
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    group_id = Column(UUID(as_uuid=True), ForeignKey("groups.id"), nullable=False)
+    sender_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    content = Column(String(2000), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    sender = relationship("User", foreign_keys=[sender_id])
+
+
 # ========== Phase 2: Groups ==========
 
 class GroupStatus(str, enum.Enum):

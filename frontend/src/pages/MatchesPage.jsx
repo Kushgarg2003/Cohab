@@ -119,13 +119,18 @@ function MatchModal({ match, onClose }) {
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <button
-            onClick={() => navigate(`/group/${match.group_id}`)}
+            onClick={() => navigate(`/group/${match.group_id}/chat`)}
             style={{ background: '#111827', color: 'white', border: 'none', padding: '14px 24px', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
-            View Group →
+            💬 Start chatting →
+          </button>
+          <button
+            onClick={() => navigate(`/group/${match.group_id}`)}
+            style={{ background: 'transparent', color: '#374151', border: '1.5px solid #e5e7eb', padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+            View Group
           </button>
           <button
             onClick={onClose}
-            style={{ background: 'transparent', color: '#6b7280', border: '1.5px solid #e5e7eb', padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+            style={{ background: 'transparent', color: '#9ca3af', border: 'none', padding: '8px', borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             Keep Swiping
           </button>
         </div>

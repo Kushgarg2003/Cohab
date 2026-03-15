@@ -175,4 +175,17 @@ export const swipesAPI = {
   }
 }
 
+export const chatAPI = {
+  getMessages: async (groupId, userId, beforeId = null) => {
+    const params = { user_id: userId, limit: 50 }
+    if (beforeId) params.before_id = beforeId
+    const response = await api.get(`/api/chat/${groupId}/messages`, { params })
+    return response.data.data
+  },
+  sendMessage: async (groupId, userId, content) => {
+    const response = await api.post(`/api/chat/${groupId}/messages`, { user_id: userId, content })
+    return response.data.data
+  }
+}
+
 export default api

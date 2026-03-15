@@ -187,9 +187,14 @@ export function GroupDashboardPage() {
           </div>
         </div>
 
-        <button onClick={() => navigate(`/group/${groupId}/wishlist`)} style={{ ...S.btnPrimary, width: '100%', padding: '14px', fontSize: 16 }}>
-          View property wishlist →
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <button onClick={() => navigate(`/group/${groupId}/chat`)} style={{ ...S.btnPrimary, width: '100%', padding: '14px', fontSize: 16 }}>
+            💬 Group chat →
+          </button>
+          <button onClick={() => navigate(`/group/${groupId}/wishlist`)} style={{ ...S.btnOutline, width: '100%', padding: '14px', fontSize: 16 }}>
+            View property wishlist →
+          </button>
+        </div>
       </div>
     </div>
   )
