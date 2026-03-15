@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import MatchesPage from './pages/MatchesPage'
 import { CreateGroupPage, JoinGroupPage, GroupDashboardPage, WishlistPage } from './pages/GroupPage'
 import ChatPage from './pages/ChatPage'
+import KitPage from './pages/KitPage'
 
 const GOOGLE_CLIENT_ID = '863061899819-p74tbi4qpfi5f4bghlhd946dp96mpnph.apps.googleusercontent.com'
 
@@ -22,6 +23,7 @@ function App() {
           <Route path="/group/:groupId" element={<GroupDashboardPage />} />
           <Route path="/group/:groupId/wishlist" element={<WishlistPage />} />
           <Route path="/group/:groupId/chat" element={<ChatPage />} />
+          <Route path="/group/:groupId/kit" element={<KitPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

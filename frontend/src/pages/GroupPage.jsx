@@ -191,6 +191,9 @@ export function GroupDashboardPage() {
           <button onClick={() => navigate(`/group/${groupId}/chat`)} style={{ ...S.btnPrimary, width: '100%', padding: '14px', fontSize: 15 }}>
             💬 Group chat →
           </button>
+          <button onClick={() => navigate(`/group/${groupId}/kit`)} style={{ ...S.btnOutline, width: '100%', padding: '14px', fontSize: 15 }}>
+            🧰 The Kit — items & debts →
+          </button>
           <button onClick={() => navigate(`/group/${groupId}/wishlist`)} style={{ ...S.btnOutline, width: '100%', padding: '14px', fontSize: 15 }}>
             🏠 Property wishlist →
           </button>

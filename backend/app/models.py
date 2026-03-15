@@ -166,6 +166,55 @@ class MutualMatch(Base):
     user_b = relationship("User", foreign_keys=[user_b_id])
 
 
+# ========== The Kit ==========
+
+class SplitType(str, enum.Enum):
+    SHARED = "shared"          # 50/50, creates debt
+    INDIVIDUAL = "individual"  # one person owns it
+
+class KitStatus(str, enum.Enum):
+    TO_BUY = "to_buy"
+    ORDERED = "ordered"
+    DELIVERED = "delivered"
+
+class KitItem(Base):
+    __tablename__ = "kit_items"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    group_id = Column(UUID(as_uuid=True), ForeignKey("groups.id"), nullable=False)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    item_name = Column(String(255), nullable=False)
+    category = Column(String(100), nullable=True)
+    estimated_cost = Column(Float, nullable=True)
+    purchase_price = Column(Float, nullable=True)       # actual price paid
+    split_type = Column(SQLEnum(SplitType), nullable=False, default=SplitType.SHARED)
+    assigned_to = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)  # for individual
+    status = Column(SQLEnum(KitStatus), nullable=False, default=KitStatus.TO_BUY)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    creator = relationship("User", foreign_keys=[created_by])
+    owner = relationship("User", foreign_keys=[assigned_to])
+    debts = relationship("KitDebt", back_populates="item", cascade="all, delete-orphan")
+
+
+class KitDebt(Base):
+    __tablename__ = "kit_debts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    kit_item_id = Column(UUID(as_uuid=True), ForeignKey("kit_items.id"), nullable=False)
+    group_id = Column(UUID(as_uuid=True), ForeignKey("groups.id"), nullable=False)
+    debtor_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)   # owes money
+    creditor_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False) # paid money
+    amount = Column(Float, nullable=False)
+    settled = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    item = relationship("KitItem", back_populates="debts")
+    debtor = relationship("User", foreign_keys=[debtor_id])
+    creditor = relationship("User", foreign_keys=[creditor_id])
+
+
 # ========== Chat ==========
 
 class Message(Base):

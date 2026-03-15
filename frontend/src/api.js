@@ -175,6 +175,37 @@ export const swipesAPI = {
   }
 }
 
+export const kitAPI = {
+  getBundles: async () => {
+    const response = await api.get('/api/kit/bundles')
+    return response.data.data
+  },
+  getKit: async (groupId, userId) => {
+    const response = await api.get(`/api/kit/${groupId}`, { params: { user_id: userId } })
+    return response.data.data
+  },
+  addItem: async (groupId, userId, item) => {
+    const response = await api.post(`/api/kit/${groupId}`, { user_id: userId, ...item })
+    return response.data.data
+  },
+  updateItem: async (groupId, itemId, userId, updates) => {
+    const response = await api.patch(`/api/kit/${groupId}/${itemId}`, { user_id: userId, ...updates })
+    return response.data.data
+  },
+  deleteItem: async (groupId, itemId, userId) => {
+    const response = await api.delete(`/api/kit/${groupId}/${itemId}`, { params: { user_id: userId } })
+    return response.data.data
+  },
+  getDebts: async (groupId, userId) => {
+    const response = await api.get(`/api/kit/${groupId}/debts/summary`, { params: { user_id: userId } })
+    return response.data.data
+  },
+  settleDebt: async (groupId, debtId, userId) => {
+    const response = await api.post(`/api/kit/${groupId}/debts/${debtId}/settle`, { user_id: userId })
+    return response.data.data
+  }
+}
+
 export const chatAPI = {
   getMessages: async (groupId, userId, beforeId = null) => {
     const params = { user_id: userId, limit: 50 }
