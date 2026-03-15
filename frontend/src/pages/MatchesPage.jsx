@@ -217,12 +217,16 @@ export default function MatchesPage() {
         <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.5 }}>
           Co<span style={{ color: 'var(--primary)' }}>hab</span>
         </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {mutualMatches.length > 0 && (
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)', background: 'var(--green-light)', padding: '4px 10px', borderRadius: 20 }}>
               🎉 {mutualMatches.length} matched
             </span>
           )}
+          <button
+            onClick={() => { localStorage.clear(); navigate('/') }}
+            style={{ background: 'var(--surface-2)', border: '1px solid var(--border-2)', color: 'var(--text-3)', fontSize: 12, fontWeight: 600, padding: '6px 12px', borderRadius: 8, cursor: 'pointer' }}
+          >Sign out</button>
         </div>
       </div>
 
