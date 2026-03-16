@@ -219,4 +219,15 @@ export const chatAPI = {
   }
 }
 
+export const adminAPI = {
+  getUsers: async (secret) => {
+    const response = await api.get('/api/admin/users', { headers: { 'x-admin-secret': secret } })
+    return response.data.data
+  },
+  deleteUser: async (userId, secret) => {
+    const response = await api.delete(`/api/admin/users/${userId}`, { headers: { 'x-admin-secret': secret } })
+    return response.data
+  }
+}
+
 export default api

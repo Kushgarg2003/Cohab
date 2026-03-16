@@ -1,14 +1,19 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.database import get_db, settings
 from app.models import User, SurveyResponse
 from app.schemas import APIResponse
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
+def verify_admin(x_admin_secret: str = Header(...)):
+    if x_admin_secret != settings.ADMIN_SECRET:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
 @router.get("/users", response_model=APIResponse)
-def list_all_users(db: Session = Depends(get_db)):
+def list_all_users(db: Session = Depends(get_db), _: None = Depends(verify_admin)):
     """Get all users with their survey data."""
     users = db.query(User).order_by(User.created_at.desc()).all()
 
@@ -19,6 +24,7 @@ def list_all_users(db: Session = Depends(get_db)):
             "user_id": str(user.id),
             "name": user.name,
             "email": user.email,
+            "picture": user.picture,
             "survey_completed": user.survey_completed,
             "created_at": user.created_at.isoformat(),
             "survey": {
@@ -40,4 +46,19 @@ def list_all_users(db: Session = Depends(get_db)):
         status="success",
         data={"users": result, "total": len(result)},
         message=f"{len(result)} users found"
+    )
+
+
+@router.delete("/users/{user_id}", response_model=APIResponse)
+def delete_user(user_id: str, db: Session = Depends(get_db), _: None = Depends(verify_admin)):
+    """Delete a user and all their data."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(user)
+    db.commit()
+    return APIResponse(
+        status="success",
+        data={},
+        message=f"User {user_id} deleted"
     )

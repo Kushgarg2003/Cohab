@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     DEBUG: bool = os.getenv("DEBUG", "True") == "True"
     API_HOST: str = os.getenv("API_HOST", "127.0.0.1")
     API_PORT: int = int(os.getenv("API_PORT", "8000"))
+    ADMIN_SECRET: str = os.getenv("ADMIN_SECRET", "changeme")
 
     class Config:
         env_file = ".env"
