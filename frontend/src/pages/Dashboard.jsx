@@ -45,11 +45,10 @@ function NameScreen({ onNext }) {
 import SurveyCard from '../components/SurveyCard'
 import LifestyleSwiperCard from '../components/LifestyleSwiperCard'
 import DealbreakersSection from '../components/DealbreakersSection'
-import DeepDivePrompts from '../components/DeepDivePrompts'
 import SurveyPreview from '../components/SurveyPreview'
 
-const STEPS = ['name', 'mandatory', 'lifestyle', 'dealbreakers', 'deepdive', 'preview']
-const STEP_LABELS = ['Name', 'Basics', 'Lifestyle', 'Dealbreakers', 'Deep dive', 'Review']
+const STEPS = ['name', 'mandatory', 'lifestyle', 'dealbreakers', 'preview']
+const STEP_LABELS = ['Name', 'Basics', 'Lifestyle', 'Dealbreakers', 'Review']
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -148,11 +147,7 @@ export default function Dashboard() {
     catch { setError('Failed to save. Please try again.') }
   }
   const handleDealbreakerNext = async () => {
-    try { await surveyAPI.saveDealbreakers(survey.surveyId, survey.dealbreakers); survey.setCurrentStep('deepdive') }
-    catch { setError('Failed to save. Please try again.') }
-  }
-  const handleDeepDiveNext = async () => {
-    try { await surveyAPI.saveDeepDive(survey.surveyId, survey.deepDiveResponses); survey.setCurrentStep('preview') }
+    try { await surveyAPI.saveDealbreakers(survey.surveyId, survey.dealbreakers); survey.setCurrentStep('preview') }
     catch { setError('Failed to save. Please try again.') }
   }
   const handleSubmit = async () => {
@@ -194,12 +189,12 @@ export default function Dashboard() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '0 0 60px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '0 0 100px' }}>
 
       {/* Top bar */}
       <div style={{ borderBottom: '1px solid var(--border)', background: 'var(--white)', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
         <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.3 }}>
-          Co<span style={{ color: 'var(--primary)' }}>hab</span>
+          Coloc<span style={{ color: 'var(--primary)' }}>sy</span>
         </span>
         <div style={{ display: 'flex', gap: 6 }}>
           {STEPS.map((s, i) => (
@@ -238,13 +233,33 @@ export default function Dashboard() {
         {survey.currentStep === 'dealbreakers' && (
           <DealbreakersSection onNext={handleDealbreakerNext} onBack={() => survey.setCurrentStep('lifestyle')} />
         )}
-        {survey.currentStep === 'deepdive' && (
-          <DeepDivePrompts prompts={survey.allQuestions?.deep_dive_prompts || []} onNext={handleDeepDiveNext} onBack={() => survey.setCurrentStep('dealbreakers')} />
-        )}
         {survey.currentStep === 'preview' && (
-          <SurveyPreview onSubmit={handleSubmit} onBack={() => survey.setCurrentStep('deepdive')} />
+          <SurveyPreview onSubmit={handleSubmit} onBack={() => survey.setCurrentStep('dealbreakers')} />
         )}
       </div>
+
+      {/* Bottom progress bar */}
+      {stepIndex >= 0 && (
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(12,12,16,0.95)', backdropFilter: 'blur(12px)', borderTop: '1px solid var(--border)', padding: '10px 24px 14px', zIndex: 20 }}>
+          <div style={{ maxWidth: 520, margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)' }}>{STEP_LABELS[stepIndex]}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary)' }}>
+                {Math.round((stepIndex / (STEPS.length - 1)) * 100)}% complete
+              </span>
+            </div>
+            <div style={{ height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${(stepIndex / (STEPS.length - 1)) * 100}%`,
+                background: 'var(--primary)',
+                borderRadius: 2,
+                transition: 'width 0.4s ease'
+              }} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
