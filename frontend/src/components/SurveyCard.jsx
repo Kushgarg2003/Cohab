@@ -1,9 +1,12 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import useSurvey from '../hooks/useSurvey'
 
 export default function SurveyCard({ questions, onNext, onBack }) {
   const { mandatoryData, setMandatoryData } = useSurvey()
   const [step, setStep] = useState(0)
+  const [locationSearch, setLocationSearch] = useState('')
+
+  useEffect(() => { setLocationSearch('') }, [step])
 
   const fields = [
     { key: 'budget_range', label: questions?.budget_range?.label, options: questions?.budget_range?.options },
@@ -55,17 +58,81 @@ export default function SurveyCard({ questions, onNext, onBack }) {
       <h2 style={S.question}>{currentField.label}</h2>
       {currentField.isMulti && <p style={S.hint}>Select all that apply</p>}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
-        {currentField.options?.map((option) => {
-          const selected = isSelected(option)
-          return (
-            <button key={option} onClick={() => handleSelect(option)} style={{ ...S.option, ...(selected ? S.optionSelected : {}) }}>
-              <span>{option}</span>
-              {selected && <span style={{ color: 'var(--primary)', fontSize: 18, lineHeight: 1 }}>✓</span>}
-            </button>
-          )
-        })}
-      </div>
+      {currentField.isMulti ? (
+        <div style={{ marginBottom: 32 }}>
+          {/* Search input */}
+          <input
+            placeholder="Search city or area…"
+            value={locationSearch}
+            onChange={e => setLocationSearch(e.target.value)}
+            style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '2px solid var(--border)', fontSize: 14, fontFamily: 'inherit', outline: 'none', marginBottom: 16, background: 'var(--white)', color: 'var(--text)', boxSizing: 'border-box' }}
+            onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+            onBlur={e => e.target.style.borderColor = 'var(--border)'}
+          />
+          {/* Selected count */}
+          {mandatoryData.locations.length > 0 && (
+            <p style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 700, marginBottom: 12 }}>
+              {mandatoryData.locations.length} selected
+            </p>
+          )}
+          {/* Grouped or filtered chips */}
+          {(() => {
+            const options = currentField.options || []
+            if (locationSearch.trim()) {
+              const filtered = options.filter(o => o.toLowerCase().includes(locationSearch.toLowerCase()))
+              return (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {filtered.map(option => {
+                    const selected = isSelected(option)
+                    const area = option.includes(' - ') ? option.split(' - ')[1] : option
+                    return (
+                      <button key={option} onClick={() => handleSelect(option)} style={{ ...S.chip, ...(selected ? S.chipSelected : {}) }}>
+                        {selected && <span style={{ marginRight: 4 }}>✓</span>}{area}
+                      </button>
+                    )
+                  })}
+                  {filtered.length === 0 && <p style={{ color: 'var(--text-3)', fontSize: 13 }}>No results found.</p>}
+                </div>
+              )
+            }
+            // Group by city
+            const groups = {}
+            options.forEach(o => {
+              const city = o.includes(' - ') ? o.split(' - ')[0] : 'Other'
+              if (!groups[city]) groups[city] = []
+              groups[city].push(o)
+            })
+            return Object.entries(groups).map(([city, areas]) => (
+              <div key={city} style={{ marginBottom: 16 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>{city}</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {areas.map(option => {
+                    const selected = isSelected(option)
+                    const area = option.split(' - ')[1]
+                    return (
+                      <button key={option} onClick={() => handleSelect(option)} style={{ ...S.chip, ...(selected ? S.chipSelected : {}) }}>
+                        {selected && <span style={{ marginRight: 4 }}>✓</span>}{area}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))
+          })()}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
+          {currentField.options?.map((option) => {
+            const selected = isSelected(option)
+            return (
+              <button key={option} onClick={() => handleSelect(option)} style={{ ...S.option, ...(selected ? S.optionSelected : {}) }}>
+                <span>{option}</span>
+                {selected && <span style={{ color: 'var(--primary)', fontSize: 18, lineHeight: 1 }}>✓</span>}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 10 }}>
         <button onClick={handleBack} style={S.btnSecondary}>← Back</button>
@@ -85,4 +152,6 @@ const S = {
   optionSelected: { borderColor: 'var(--primary)', background: 'var(--primary-light)', fontWeight: 600 },
   btnPrimary: { background: 'var(--primary)', color: 'white', border: 'none', padding: '13px 24px', borderRadius: 'var(--radius-sm)', fontSize: 15, fontWeight: 700, cursor: 'pointer' },
   btnSecondary: { background: 'var(--white)', color: 'var(--text-2)', border: '2px solid var(--border)', padding: '13px 20px', borderRadius: 'var(--radius-sm)', fontSize: 15, fontWeight: 600, cursor: 'pointer' },
+  chip: { padding: '7px 14px', border: '2px solid var(--border)', borderRadius: 20, background: 'var(--white)', fontSize: 13, fontWeight: 500, cursor: 'pointer', color: 'var(--text)', transition: 'all 0.15s', whiteSpace: 'nowrap' },
+  chipSelected: { borderColor: 'var(--primary)', background: 'var(--primary-light)', fontWeight: 700, color: 'var(--primary)' },
 }
