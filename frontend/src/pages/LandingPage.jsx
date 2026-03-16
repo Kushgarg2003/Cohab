@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GoogleLogin } from '@react-oauth/google'
 import { authAPI } from '../api'
+import api from '../api'
 
 const HOW_IT_WORKS = [
   { step: '01', title: 'Tell us how you live', desc: 'Budget, locations, sleep schedule, cleanliness — answer honestly in 5 minutes.' },
@@ -13,6 +14,11 @@ export default function LandingPage() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  // Pre-warm the Render backend on page load to avoid cold-start lag on sign-in
+  useEffect(() => {
+    api.get('/health').catch(() => {})
+  }, [])
 
   const handleSuccess = async (credentialResponse) => {
     setLoading(true)
