@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { chatAPI, groupsAPI } from '../api'
 import Avatar from '../components/Avatar'
+import { useNotifications } from '../hooks/useNotifications'
 
 function formatTime(isoString) {
   const date = new Date(isoString)
@@ -24,6 +25,8 @@ export default function ChatPage() {
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
   const pollingRef = useRef(null)
+  const lastMessageIdRef = useRef(null)
+  const { notify } = useNotifications()
 
   const fetchMessages = useCallback(async (silent = false) => {
     try {
@@ -31,6 +34,16 @@ export default function ChatPage() {
       setMessages(prev => {
         // Only update if messages changed
         if (JSON.stringify(prev.map(m => m.id)) === JSON.stringify(data.messages.map(m => m.id))) return prev
+        // Notify on new messages from others during polling
+        if (silent && lastMessageIdRef.current) {
+          const newMsgs = data.messages.filter(
+            m => m.sender_id !== userId && m.id !== lastMessageIdRef.current &&
+            data.messages.findIndex(x => x.id === lastMessageIdRef.current) <
+            data.messages.findIndex(x => x.id === m.id)
+          )
+          newMsgs.forEach(m => notify(m.sender_name || 'New message', m.content))
+        }
+        if (data.messages.length > 0) lastMessageIdRef.current = data.messages[data.messages.length - 1].id
         return data.messages
       })
       if (!silent) setLoading(false)

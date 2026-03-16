@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { swipesAPI, groupsAPI } from '../api'
 import Avatar from '../components/Avatar'
 import BottomNav from '../components/BottomNav'
+import { useNotifications } from '../hooks/useNotifications'
 
 const SCORE_COLOR = (s) => s >= 70 ? '#22C55E' : s >= 45 ? '#F59E0B' : '#EF4444'
 const SCORE_LABEL = (s) => s >= 70 ? 'Great match' : s >= 45 ? 'Decent match' : 'Low match'
@@ -145,6 +146,7 @@ export default function MatchesPage() {
   const [swiping, setSwiping] = useState(false)
   const [swipeDir, setSwipeDir] = useState(null) // 'like' | 'pass' for animation
   const userId = localStorage.getItem('userId')
+  const { notify } = useNotifications()
 
   useEffect(() => {
     if (!userId) { navigate('/'); return }
@@ -169,6 +171,7 @@ export default function MatchesPage() {
       if (result.mutual_match) {
         setMatchModal({ name: person.name, group_id: result.group_id })
         setMutualMatches(prev => [...prev, { user_id: person.user_id, name: person.name, picture: person.picture, group_id: result.group_id }])
+        notify("It's a Match!", `You and ${person.name} liked each other.`)
       }
       setTimeout(() => {
         setCurrentIndex(i => i + 1)
