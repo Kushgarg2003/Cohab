@@ -76,7 +76,17 @@ def get_all_questions(db: Session = Depends(get_db)):
             },
             "locations": {
                 "label": "Where do you need to be near?",
-                "options": ["HSR Layout", "BKC", "Gachibowli", "Whitefield", "Indiranagar", "Koramangala"]
+                "options": [
+                    "Bangalore - Koramangala", "Bangalore - Indiranagar", "Bangalore - HSR Layout",
+                    "Bangalore - Whitefield", "Bangalore - Electronic City", "Bangalore - Marathahalli",
+                    "Mumbai - BKC", "Mumbai - Andheri", "Mumbai - Powai", "Mumbai - Thane",
+                    "Hyderabad - Gachibowli", "Hyderabad - Hitech City", "Hyderabad - Kondapur",
+                    "Delhi - Connaught Place", "Delhi - Lajpat Nagar", "Delhi - Dwarka",
+                    "Gurgaon - Cyber City", "Gurgaon - Sohna Road", "Gurgaon - Golf Course Road",
+                    "Noida - Sector 62", "Noida - Sector 18", "Noida - Greater Noida",
+                    "Pune - Hinjewadi", "Pune - Kothrud", "Pune - Baner",
+                    "Chennai - OMR", "Chennai - Anna Nagar", "Chennai - Velachery"
+                ]
             },
             "move_in_timeline": {
                 "label": "When are you looking to shift?",
