@@ -42,7 +42,7 @@ export default function LandingPage() {
       {/* Nav */}
       <nav style={{ padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 10 }}>
         <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.5 }}>
-          Co<span style={{ color: 'var(--primary)' }}>hab</span>
+          Coloc<span style={{ color: 'var(--primary)' }}>sy</span>
         </span>
         {localStorage.getItem('token') && (
           <button onClick={() => navigate('/matches')} style={{ background: 'var(--surface-2)', border: '1px solid var(--border-2)', color: 'var(--text-2)', fontWeight: 600, cursor: 'pointer', fontSize: 14, padding: '8px 16px', borderRadius: 8 }}>

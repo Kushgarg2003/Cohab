@@ -289,7 +289,7 @@ export default function MatchesPage() {
             <p style={{ color: 'var(--text-2)', fontSize: 14, lineHeight: 1.6 }}>
               {mutualMatches.length > 0
                 ? `You have ${mutualMatches.length} mutual match${mutualMatches.length > 1 ? 'es' : ''}. Check your groups!`
-                : 'Share Cohab with friends to get more matches.'}
+                : 'Share Colocsy with friends to get more matches.'}
             </p>
           </div>
         )}
