@@ -4,9 +4,17 @@ import useSurvey from '../hooks/useSurvey'
 export default function SurveyCard({ questions, onNext, onBack }) {
   const { mandatoryData, setMandatoryData } = useSurvey()
   const [step, setStep] = useState(0)
-  const [locationSearch, setLocationSearch] = useState('')
+  const [selectedCity, setSelectedCity] = useState(null)
 
-  useEffect(() => { setLocationSearch('') }, [step])
+  // Derive selected city from existing locations on mount (for edit mode)
+  useEffect(() => {
+    if (mandatoryData.locations?.length > 0) {
+      const city = mandatoryData.locations[0].split(' - ')[0]
+      setSelectedCity(city)
+    }
+  }, [])
+
+  useEffect(() => { setSelectedCity(null) }, [step])
 
   const fields = [
     { key: 'budget_range', label: questions?.budget_range?.label, options: questions?.budget_range?.options },
@@ -39,7 +47,7 @@ export default function SurveyCard({ questions, onNext, onBack }) {
   }
 
   const isAnswered = () => currentField.isMulti
-    ? mandatoryData.locations.length > 0
+    ? selectedCity !== null && mandatoryData.locations.length > 0
     : mandatoryData[currentField.key] !== null
 
   const isSelected = (option) => currentField.isMulti
@@ -60,64 +68,61 @@ export default function SurveyCard({ questions, onNext, onBack }) {
 
       {currentField.isMulti ? (
         <div style={{ marginBottom: 32 }}>
-          {/* Search input */}
-          <input
-            placeholder="Search city or area…"
-            value={locationSearch}
-            onChange={e => setLocationSearch(e.target.value)}
-            style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '2px solid var(--border)', fontSize: 14, fontFamily: 'inherit', outline: 'none', marginBottom: 16, background: 'var(--white)', color: 'var(--text)', boxSizing: 'border-box' }}
-            onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-            onBlur={e => e.target.style.borderColor = 'var(--border)'}
-          />
-          {/* Selected count */}
-          {mandatoryData.locations.length > 0 && (
-            <p style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 700, marginBottom: 12 }}>
-              {mandatoryData.locations.length} selected
-            </p>
-          )}
-          {/* Grouped or filtered chips */}
           {(() => {
             const options = currentField.options || []
-            if (locationSearch.trim()) {
-              const filtered = options.filter(o => o.toLowerCase().includes(locationSearch.toLowerCase()))
+            // Build city list from options
+            const cities = [...new Set(options.map(o => o.includes(' - ') ? o.split(' - ')[0] : o))]
+
+            // Step A: Pick a city
+            if (!selectedCity) {
               return (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {filtered.map(option => {
-                    const selected = isSelected(option)
-                    const area = option.includes(' - ') ? option.split(' - ')[1] : option
-                    return (
-                      <button key={option} onClick={() => handleSelect(option)} style={{ ...S.chip, ...(selected ? S.chipSelected : {}) }}>
-                        {selected && <span style={{ marginRight: 4 }}>✓</span>}{area}
+                <>
+                  <p style={S.hint}>Pick a city — you can choose multiple areas within it.</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {cities.map(city => (
+                      <button key={city} onClick={() => {
+                        setSelectedCity(city)
+                        setMandatoryData({ locations: [] }) // clear if changing city
+                      }} style={S.option}>
+                        <span>{city}</span>
+                        <span style={{ color: 'var(--text-3)', fontSize: 13 }}>→</span>
                       </button>
-                    )
-                  })}
-                  {filtered.length === 0 && <p style={{ color: 'var(--text-3)', fontSize: 13 }}>No results found.</p>}
-                </div>
+                    ))}
+                  </div>
+                </>
               )
             }
-            // Group by city
-            const groups = {}
-            options.forEach(o => {
-              const city = o.includes(' - ') ? o.split(' - ')[0] : 'Other'
-              if (!groups[city]) groups[city] = []
-              groups[city].push(o)
-            })
-            return Object.entries(groups).map(([city, areas]) => (
-              <div key={city} style={{ marginBottom: 16 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>{city}</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+
+            // Step B: Pick areas within selected city
+            const areas = options.filter(o => o.startsWith(selectedCity + ' - '))
+            const selectedCount = mandatoryData.locations.length
+
+            return (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                  <button onClick={() => { setSelectedCity(null); setMandatoryData({ locations: [] }) }}
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 12px', fontSize: 12, fontWeight: 700, color: 'var(--text-3)', cursor: 'pointer' }}>
+                    ← {selectedCity}
+                  </button>
+                  {selectedCount > 0 && (
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary)' }}>{selectedCount} selected</span>
+                  )}
+                </div>
+                <p style={S.hint}>Pick all the areas you'd consider.</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                   {areas.map(option => {
-                    const selected = isSelected(option)
+                    const selected = mandatoryData.locations.includes(option)
                     const area = option.split(' - ')[1]
                     return (
-                      <button key={option} onClick={() => handleSelect(option)} style={{ ...S.chip, ...(selected ? S.chipSelected : {}) }}>
+                      <button key={option} onClick={() => handleSelect(option)}
+                        style={{ ...S.chip, ...(selected ? S.chipSelected : {}) }}>
                         {selected && <span style={{ marginRight: 4 }}>✓</span>}{area}
                       </button>
                     )
                   })}
                 </div>
-              </div>
-            ))
+              </>
+            )
           })()}
         </div>
       ) : (
