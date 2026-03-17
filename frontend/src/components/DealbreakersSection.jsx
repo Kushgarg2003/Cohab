@@ -15,7 +15,7 @@ export default function DealbreakersSection({ onNext, onBack }) {
   const [activeModal, setActiveModal] = useState(null)
 
   const handleSelect = (badge, value) => {
-    setDealbreakers({ [badge]: value })
+    setDealbreakers({ [badge]: dealbreakers[badge] === value ? null : value })
     setActiveModal(null)
   }
 

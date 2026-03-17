@@ -32,7 +32,7 @@ export default function SurveyCard({ questions, onNext, onBack }) {
         : [...mandatoryData.locations, value]
       setMandatoryData({ locations })
     } else {
-      setMandatoryData({ [currentField.key]: value })
+      setMandatoryData({ [currentField.key]: mandatoryData[currentField.key] === value ? null : value })
     }
   }
 
