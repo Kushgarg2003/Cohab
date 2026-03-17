@@ -227,6 +227,10 @@ export const adminAPI = {
   deleteUser: async (userId, secret) => {
     const response = await api.delete(`/api/admin/users/${userId}`, { headers: { 'x-admin-secret': secret } })
     return response.data
+  },
+  flushMatchScores: async (secret) => {
+    const response = await api.delete('/api/admin/match-scores', { headers: { 'x-admin-secret': secret } })
+    return response.data
   }
 }
 

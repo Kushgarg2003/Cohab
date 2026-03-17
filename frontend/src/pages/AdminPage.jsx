@@ -9,6 +9,7 @@ export default function AdminPage() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+  const [flushing, setFlushing] = useState(false)
   const [search, setSearch] = useState('')
 
   const login = async (e) => {
@@ -38,6 +39,19 @@ export default function AdminPage() {
       alert('Failed to delete user.')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  const handleFlush = async () => {
+    if (!confirm('Flush all cached match scores? They will recompute fresh on next load.')) return
+    setFlushing(true)
+    try {
+      const res = await adminAPI.flushMatchScores(secret)
+      alert(res.message)
+    } catch {
+      alert('Failed to flush scores.')
+    } finally {
+      setFlushing(false)
     }
   }
 
@@ -83,6 +97,13 @@ export default function AdminPage() {
             </h1>
             <p style={{ margin: '4px 0 0', color: '#666', fontSize: 14 }}>{total} total users</p>
           </div>
+          <button
+            onClick={handleFlush}
+            disabled={flushing}
+            style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          >
+            {flushing ? 'Flushing…' : 'Flush Match Scores'}
+          </button>
           <input
             placeholder="Search by name or email…"
             value={search}

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from app.database import get_db, settings
-from app.models import User, SurveyResponse
+from app.models import User, SurveyResponse, MatchScore
 from app.schemas import APIResponse
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -47,6 +47,14 @@ def list_all_users(db: Session = Depends(get_db), _: None = Depends(verify_admin
         data={"users": result, "total": len(result)},
         message=f"{len(result)} users found"
     )
+
+
+@router.delete("/match-scores", response_model=APIResponse)
+def flush_match_scores(db: Session = Depends(get_db), _: None = Depends(verify_admin)):
+    """Delete all cached match scores so they recompute with the latest algorithm."""
+    count = db.query(MatchScore).delete()
+    db.commit()
+    return APIResponse(status="success", data={"deleted": count}, message=f"Flushed {count} cached match scores")
 
 
 @router.delete("/users/{user_id}", response_model=APIResponse)
