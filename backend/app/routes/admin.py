@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from app.database import get_db, settings
-from app.models import User, SurveyResponse, MatchScore
+from app.models import User, SurveyResponse, MatchScore, MutualMatch
 from app.schemas import APIResponse
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -42,9 +42,11 @@ def list_all_users(db: Session = Depends(get_db), _: None = Depends(verify_admin
             } if survey else None
         })
 
+    mutual_matches = db.query(MutualMatch).count()
+
     return APIResponse(
         status="success",
-        data={"users": result, "total": len(result)},
+        data={"users": result, "total": len(result), "mutual_matches": mutual_matches},
         message=f"{len(result)} users found"
     )
 

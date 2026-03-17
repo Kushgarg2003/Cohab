@@ -6,6 +6,7 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(false)
   const [users, setUsers] = useState([])
   const [total, setTotal] = useState(0)
+  const [mutualMatches, setMutualMatches] = useState(0)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
@@ -20,6 +21,7 @@ export default function AdminPage() {
       const data = await adminAPI.getUsers(secret)
       setUsers(data.users)
       setTotal(data.total)
+      setMutualMatches(data.mutual_matches || 0)
       setAuthed(true)
     } catch {
       setError('Wrong secret key.')
@@ -116,6 +118,7 @@ export default function AdminPage() {
         <div style={{ display: 'flex', gap: 16, marginBottom: 28, flexWrap: 'wrap' }}>
           {[
             ['Total Users', total],
+            ['Mutual Matches', mutualMatches],
             ['Survey Done', users.filter(u => u.survey_completed).length],
             ['No Survey', users.filter(u => !u.survey_completed).length],
           ].map(([label, val]) => (
