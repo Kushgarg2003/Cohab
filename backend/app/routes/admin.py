@@ -1,7 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
+from uuid import UUID
 from app.database import get_db, settings
-from app.models import User, SurveyResponse, MatchScore, MutualMatch
+from app.models import (User, SurveyResponse, MatchScore, MutualMatch,
+                        UserSwipe, GroupMember, Group, Message,
+                        KitItem, KitDebt, WishlistItem, WishlistVote)
 from app.schemas import APIResponse
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -77,14 +81,85 @@ def flush_match_scores(db: Session = Depends(get_db), _: None = Depends(verify_a
 
 @router.delete("/users/{user_id}", response_model=APIResponse)
 def delete_user(user_id: str, db: Session = Depends(get_db), _: None = Depends(verify_admin)):
-    """Delete a user and all their data."""
-    user = db.query(User).filter(User.id == user_id).first()
+    """Delete a user and all their data. User can re-join with same Google account."""
+    try:
+        user_uuid = UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid user_id")
+
+    user = db.query(User).filter(User.id == user_uuid).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # 1. Match scores
+    db.query(MatchScore).filter(
+        or_(MatchScore.user_a_id == user_uuid, MatchScore.user_b_id == user_uuid)
+    ).delete(synchronize_session=False)
+
+    # 2. Mutual matches
+    db.query(MutualMatch).filter(
+        or_(MutualMatch.user_a_id == user_uuid, MutualMatch.user_b_id == user_uuid)
+    ).delete(synchronize_session=False)
+
+    # 3. Swipes (both sides)
+    db.query(UserSwipe).filter(
+        or_(UserSwipe.swiper_id == user_uuid, UserSwipe.target_id == user_uuid)
+    ).delete(synchronize_session=False)
+
+    # 4. Kit debts where this user is debtor or creditor
+    db.query(KitDebt).filter(
+        or_(KitDebt.debtor_id == user_uuid, KitDebt.creditor_id == user_uuid)
+    ).delete(synchronize_session=False)
+
+    # 5. Nullify kit items assigned to this user (owned by others)
+    db.query(KitItem).filter(KitItem.assigned_to == user_uuid).update(
+        {"assigned_to": None}, synchronize_session=False)
+
+    # 6. Delete kit items created by this user (debts already cleared in step 4)
+    db.query(KitItem).filter(KitItem.created_by == user_uuid).delete(synchronize_session=False)
+
+    # 7. Wishlist votes by this user
+    db.query(WishlistVote).filter(WishlistVote.user_id == user_uuid).delete(synchronize_session=False)
+
+    # 8. Votes on items added by this user, then the items themselves
+    item_ids = [r.id for r in db.query(WishlistItem.id).filter(WishlistItem.added_by == user_uuid).all()]
+    if item_ids:
+        db.query(WishlistVote).filter(WishlistVote.wishlist_item_id.in_(item_ids)).delete(synchronize_session=False)
+    db.query(WishlistItem).filter(WishlistItem.added_by == user_uuid).delete(synchronize_session=False)
+
+    # 9. Messages sent by this user
+    db.query(Message).filter(Message.sender_id == user_uuid).delete(synchronize_session=False)
+
+    # 10. Group memberships
+    db.query(GroupMember).filter(GroupMember.user_id == user_uuid).delete(synchronize_session=False)
+
+    # 11. Groups created by this user — transfer or delete
+    for group in db.query(Group).filter(Group.created_by == user_uuid).all():
+        new_admin = db.query(GroupMember).filter(GroupMember.group_id == group.id).first()
+        if new_admin:
+            group.created_by = new_admin.user_id
+        else:
+            # No remaining members — clean up the group entirely
+            gid = group.id
+            kit_ids = [r.id for r in db.query(KitItem.id).filter(KitItem.group_id == gid).all()]
+            if kit_ids:
+                db.query(KitDebt).filter(KitDebt.kit_item_id.in_(kit_ids)).delete(synchronize_session=False)
+            db.query(KitItem).filter(KitItem.group_id == gid).delete(synchronize_session=False)
+            wl_ids = [r.id for r in db.query(WishlistItem.id).filter(WishlistItem.group_id == gid).all()]
+            if wl_ids:
+                db.query(WishlistVote).filter(WishlistVote.wishlist_item_id.in_(wl_ids)).delete(synchronize_session=False)
+            db.query(WishlistItem).filter(WishlistItem.group_id == gid).delete(synchronize_session=False)
+            db.query(Message).filter(Message.group_id == gid).delete(synchronize_session=False)
+            db.delete(group)
+
+    db.flush()
+
+    # 12. Finally delete the user (SurveyResponse cascades via ORM)
     db.delete(user)
     db.commit()
+
     return APIResponse(
         status="success",
         data={},
-        message=f"User {user_id} deleted"
+        message=f"User {user_id} deleted. They can re-join with the same Google account."
     )
