@@ -41,9 +41,9 @@ export default function LandingPage() {
 
       {/* Nav */}
       <nav style={{ padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 10 }}>
-        <div style={{ background: '#fff', borderRadius: 8, padding: '4px 10px', display: 'inline-flex', alignItems: 'center' }}>
-          <img src="/logo.jpeg" alt="Colocsy" style={{ height: 32, width: 'auto' }} />
-        </div>
+        <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.5 }}>
+          Coloc<span style={{ color: 'var(--primary)' }}>sy</span>
+        </span>
         {localStorage.getItem('token') && (
           <button onClick={() => navigate('/matches')} style={{ background: 'var(--surface-2)', border: '1px solid var(--border-2)', color: 'var(--text-2)', fontWeight: 600, cursor: 'pointer', fontSize: 14, padding: '8px 16px', borderRadius: 8 }}>
             Continue →

@@ -240,9 +240,9 @@ export default function Dashboard() {
 
       {/* Top bar */}
       <div style={{ borderBottom: '1px solid var(--border)', background: 'var(--white)', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
-        <div style={{ background: '#fff', borderRadius: 6, padding: '3px 8px', display: 'inline-flex', alignItems: 'center' }}>
-          <img src="/logo.jpeg" alt="Colocsy" style={{ height: 26, width: 'auto' }} />
-        </div>
+        <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.3 }}>
+          Coloc<span style={{ color: 'var(--primary)' }}>sy</span>
+        </span>
         <div style={{ display: 'flex', gap: 6 }}>
           {STEPS.map((s, i) => (
             <div key={s} style={{

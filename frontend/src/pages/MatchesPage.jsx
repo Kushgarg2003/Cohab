@@ -217,9 +217,9 @@ export default function MatchesPage() {
 
       {/* Header */}
       <div style={{ background: 'rgba(12,12,16,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
-        <div style={{ background: '#fff', borderRadius: 6, padding: '3px 8px', display: 'inline-flex', alignItems: 'center' }}>
-          <img src="/logo.jpeg" alt="Colocsy" style={{ height: 26, width: 'auto' }} />
-        </div>
+        <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.5 }}>
+          Coloc<span style={{ color: 'var(--primary)' }}>sy</span>
+        </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {mutualMatches.length > 0 && (
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)', background: 'var(--green-light)', padding: '4px 10px', borderRadius: 20 }}>

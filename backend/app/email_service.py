@@ -53,8 +53,8 @@ def _base_template(content: str) -> str:
 <body>
   <div class="wrapper">
     <div class="header">
-      <img src="{APP_URL}/logo.jpeg" alt="Colocsy" style="height:48px;width:auto;margin-bottom:8px;" />
-      <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.7);">Find your perfect roommate, broker-free.</p>
+      <h1>Colocsy</h1>
+      <p>Find your perfect roommate, broker-free.</p>
     </div>
     <div class="body">
       {content}
