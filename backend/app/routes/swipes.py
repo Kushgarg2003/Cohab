@@ -24,7 +24,11 @@ def _get_or_compute_score(user_a_id, user_b_id, db):
     survey_b = db.query(SurveyResponse).filter(SurveyResponse.user_id == b_uuid).first()
     if not survey_a or not survey_b:
         return None
-    result = compute_match_score(survey_a, survey_b)
+    user_a = db.query(User).filter(User.id == a_uuid).first()
+    user_b = db.query(User).filter(User.id == b_uuid).first()
+    gender_a = user_a.gender.value if user_a and user_a.gender else None
+    gender_b = user_b.gender.value if user_b and user_b.gender else None
+    result = compute_match_score(survey_a, survey_b, gender_a, gender_b)
     match = MatchScore(user_a_id=a_uuid, user_b_id=b_uuid, score=result["score"],
                        breakdown=result["breakdown"], computed_at=datetime.utcnow())
     db.add(match)

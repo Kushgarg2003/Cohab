@@ -40,13 +40,18 @@ DIETARY_COMPAT = {
     ("non-veg", "non-veg"): 1.0,
 }
 
-GENDER_COMPAT = {
+# Maps (gender_preference, actual_gender) → compatibility
+# e.g. User A prefers "female" and User B's actual gender is "male" → 0.0 conflict
+GENDER_PREF_COMPAT = {
     ("male",    "male"):    1.0,
-    ("male",    "female"):  0.0,   # hard conflict
-    ("male",    "neutral"): 1.0,
+    ("male",    "female"):  0.0,
+    ("male",    "other"):   0.5,
+    ("female",  "male"):    0.0,
     ("female",  "female"):  1.0,
-    ("female",  "neutral"): 1.0,
-    ("neutral", "neutral"): 1.0,
+    ("female",  "other"):   0.5,
+    ("neutral", "male"):    1.0,
+    ("neutral", "female"):  1.0,
+    ("neutral", "other"):   1.0,
 }
 
 # ========== Helpers ==========
@@ -80,7 +85,8 @@ def _dealbreaker_compat(val_a, val_b, matrix: dict) -> float:
 
 # ========== Main Scoring Function ==========
 
-def compute_match_score(a: SurveyResponse, b: SurveyResponse) -> dict:
+def compute_match_score(a: SurveyResponse, b: SurveyResponse,
+                        user_a_gender: str = None, user_b_gender: str = None) -> dict:
     """
     Compute compatibility score between two survey responses.
     Returns {"score": float 0-100, "breakdown": {...}}
@@ -134,7 +140,15 @@ def compute_match_score(a: SurveyResponse, b: SurveyResponse) -> dict:
     pets_c    = _dealbreaker_compat(a.pets,    b.pets,    PETS_COMPAT)
     smoking_c = _dealbreaker_compat(a.smoking, b.smoking, SMOKING_COMPAT)
     dietary_c = _dealbreaker_compat(a.dietary, b.dietary, DIETARY_COMPAT)
-    gender_c  = _dealbreaker_compat(a.gender,  b.gender,  GENDER_COMPAT)
+
+    # Gender: check A's preference vs B's actual gender, and B's preference vs A's actual gender
+    pref_a = a.gender.value if a.gender else None
+    pref_b = b.gender.value if b.gender else None
+    def _gender_pref_score(pref, actual):
+        if pref is None or actual is None:
+            return 1.0  # no info = no conflict
+        return GENDER_PREF_COMPAT.get((pref, actual), 0.0)
+    gender_c = min(_gender_pref_score(pref_a, user_b_gender), _gender_pref_score(pref_b, user_a_gender))
 
     if pets_c == 0.0 or smoking_c == 0.0 or dietary_c == 0.0 or gender_c == 0.0:
         return {"score": 0, "breakdown": {"disqualified": "dealbreaker_conflict",

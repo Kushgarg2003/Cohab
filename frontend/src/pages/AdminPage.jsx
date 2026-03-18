@@ -134,14 +134,14 @@ export default function AdminPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #1e1e1e' }}>
-                {['User', 'Email', 'Survey', 'Joined', 'Profile', 'Action'].map(h => (
+                {['User', 'Email', 'DOB', 'Phone', 'Gender', 'Survey', 'Joined', 'Action'].map(h => (
                   <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#444', textTransform: 'uppercase', letterSpacing: 1 }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={6} style={{ padding: 32, textAlign: 'center', color: '#444' }}>No users found.</td></tr>
+                <tr><td colSpan={8} style={{ padding: 32, textAlign: 'center', color: '#444' }}>No users found.</td></tr>
               )}
               {filtered.map(user => (
                 <tr key={user.user_id} style={{ borderBottom: '1px solid #161616' }}>
@@ -157,6 +157,12 @@ export default function AdminPage() {
                   </td>
                   {/* Email */}
                   <td style={{ padding: '12px 16px', fontSize: 13, color: '#888' }}>{user.email || '—'}</td>
+                  {/* DOB */}
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#888' }}>{user.date_of_birth || '—'}</td>
+                  {/* Phone */}
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#888' }}>{user.phone || '—'}</td>
+                  {/* Gender */}
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#888', textTransform: 'capitalize' }}>{user.gender || '—'}</td>
                   {/* Survey */}
                   <td style={{ padding: '12px 16px' }}>
                     <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: user.survey_completed ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)', color: user.survey_completed ? '#22c55e' : '#555' }}>
@@ -166,13 +172,6 @@ export default function AdminPage() {
                   {/* Joined */}
                   <td style={{ padding: '12px 16px', fontSize: 13, color: '#555' }}>
                     {new Date(user.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </td>
-                  {/* Survey preview */}
-                  <td style={{ padding: '12px 16px', fontSize: 12, color: '#555', maxWidth: 200 }}>
-                    {user.survey
-                      ? `${user.survey.budget_range || ''} · ${(user.survey.locations || []).join(', ')}`
-                      : <span style={{ color: '#333' }}>—</span>
-                    }
                   </td>
                   {/* Delete */}
                   <td style={{ padding: '12px 16px' }}>

@@ -25,6 +25,9 @@ def list_all_users(db: Session = Depends(get_db), _: None = Depends(verify_admin
             "name": user.name,
             "email": user.email,
             "picture": user.picture,
+            "date_of_birth": user.date_of_birth.isoformat() if user.date_of_birth else None,
+            "phone": user.phone,
+            "gender": user.gender.value if user.gender else None,
             "survey_completed": user.survey_completed,
             "created_at": user.created_at.isoformat(),
             "survey": {
