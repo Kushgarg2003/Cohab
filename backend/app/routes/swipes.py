@@ -127,6 +127,7 @@ def get_swipe_queue(user_id: UUID, db: Session = Depends(get_db)):
             } if survey else None
         })
 
+    queue = [q for q in queue if q["score"] > 30]
     queue.sort(key=lambda x: x["score"], reverse=True)
 
     return APIResponse(
