@@ -51,6 +51,19 @@ def list_all_users(db: Session = Depends(get_db), _: None = Depends(verify_admin
     )
 
 
+@router.post("/test-email", response_model=APIResponse)
+def test_email(payload: dict, _: None = Depends(verify_admin)):
+    """Send a test welcome email to the given address."""
+    to = payload.get("email")
+    if not to:
+        raise HTTPException(status_code=422, detail="email required")
+    from app.email_service import send_welcome_email
+    success = send_welcome_email(to, payload.get("name", "Tester"))
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to send email — check RESEND_API_KEY in env vars")
+    return APIResponse(status="success", data={}, message=f"Test email sent to {to}")
+
+
 @router.delete("/match-scores", response_model=APIResponse)
 def flush_match_scores(db: Session = Depends(get_db), _: None = Depends(verify_admin)):
     """Delete all cached match scores so they recompute with the latest algorithm."""

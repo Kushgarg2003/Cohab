@@ -31,9 +31,11 @@ def google_auth(payload: dict, db: Session = Depends(get_db)):
     if not user and email:
         user = db.query(User).filter(User.email == email).first()
 
+    is_new_user = False
     if not user:
         user = User(google_id=google_id, email=email, name=name, picture=picture)
         db.add(user)
+        is_new_user = True
     else:
         user.google_id = google_id
         user.picture = picture
@@ -44,6 +46,10 @@ def google_auth(payload: dict, db: Session = Depends(get_db)):
 
     db.commit()
     db.refresh(user)
+
+    if is_new_user and user.email:
+        from app.email_service import send_welcome_email
+        send_welcome_email(user.email, user.name or "")
 
     token = create_access_token(str(user.id))
 

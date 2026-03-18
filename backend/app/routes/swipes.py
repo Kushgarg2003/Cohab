@@ -187,6 +187,13 @@ def record_swipe(user_id: UUID, payload: dict, db: Session = Depends(get_db)):
                 mutual = True
                 group_id = str(new_group.id)
 
+                # Email both matched users
+                from app.email_service import send_match_email
+                if user_a.email:
+                    send_match_email(user_a.email, user_a.name or "", user_b.name or "Your match", group_id)
+                if user_b.email:
+                    send_match_email(user_b.email, user_b.name or "", user_a.name or "Your match", group_id)
+
     return APIResponse(
         status="success",
         data={

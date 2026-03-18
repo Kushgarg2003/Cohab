@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     API_HOST: str = os.getenv("API_HOST", "127.0.0.1")
     API_PORT: int = int(os.getenv("API_PORT", "8000"))
     ADMIN_SECRET: str = os.getenv("ADMIN_SECRET", "changeme")
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
+    FROM_EMAIL: str = os.getenv("FROM_EMAIL", "hello@colocsy.com")
+    APP_URL: str = os.getenv("APP_URL", "https://colocsy.com")
 
     class Config:
         env_file = ".env"
