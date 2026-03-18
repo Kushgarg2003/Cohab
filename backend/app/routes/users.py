@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
 from app.database import get_db
-from app.models import User, SurveyResponse
+from app.models import User, SurveyResponse, UserGender
 from app.schemas import UserResponse, APIResponse, UserCreate
 
 router = APIRouter(prefix="/api/users", tags=["users"])
@@ -71,6 +71,30 @@ def update_user_name(user_id: UUID, payload: dict, db: Session = Depends(get_db)
     user.name = name
     db.commit()
     return APIResponse(status="success", data={"user_id": str(user.id), "name": user.name}, message="Name saved")
+
+@router.patch("/{user_id}/basic-info", response_model=APIResponse)
+def update_basic_info(user_id: UUID, payload: dict, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    name = (payload.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Name cannot be empty")
+    age = payload.get("age")
+    if age is not None:
+        try:
+            age = int(age)
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid age")
+    phone = (payload.get("phone") or "").strip() or None
+    gender_val = payload.get("gender")
+    gender = UserGender(gender_val) if gender_val in [g.value for g in UserGender] else None
+    user.name = name
+    user.age = age
+    user.phone = phone
+    user.gender = gender
+    db.commit()
+    return APIResponse(status="success", data={"user_id": str(user.id)}, message="Basic info saved")
 
 @router.get("/{user_id}/profile", response_model=APIResponse)
 def get_user_profile(user_id: UUID, db: Session = Depends(get_db)):

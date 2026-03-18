@@ -40,6 +40,11 @@ class GenderPreference(str, enum.Enum):
     FEMALE = "female"
     NEUTRAL = "neutral"
 
+class UserGender(str, enum.Enum):
+    MALE = "male"
+    FEMALE = "female"
+    OTHER = "other"
+
 class LifestyleCategory(str, enum.Enum):
     SOCIAL_BATTERY = "social_battery"
     HABITS = "habits"
@@ -53,6 +58,9 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     survey_completed = Column(Boolean, default=False)
     name = Column(String(100), nullable=True)
+    age = Column(Integer, nullable=True)
+    phone = Column(String(15), nullable=True)
+    gender = Column(SQLEnum(UserGender), nullable=True)
     google_id = Column(String(255), unique=True, nullable=True)
     email = Column(String(255), unique=True, nullable=True)
     picture = Column(String(500), nullable=True)

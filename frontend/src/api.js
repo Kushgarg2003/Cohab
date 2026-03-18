@@ -46,6 +46,12 @@ export const surveyAPI = {
     return response.data.data
   },
 
+  // Save basic info (name, age, gender, phone)
+  saveBasicInfo: async (userId, { name, age, gender, phone }) => {
+    const response = await api.patch(`/api/users/${userId}/basic-info`, { name, age, gender, phone })
+    return response.data.data
+  },
+
   // Start a new survey
   startSurvey: async (userId) => {
     const response = await api.post(`/api/survey/start`, null, {

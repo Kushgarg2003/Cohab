@@ -3,40 +3,83 @@ import { useNavigate } from 'react-router-dom'
 import useSurvey from '../hooks/useSurvey'
 import { surveyAPI } from '../api'
 
-function NameScreen({ onNext }) {
+function BasicInfoScreen({ onNext }) {
   const [name, setName] = React.useState(localStorage.getItem('userName') || '')
+  const [age, setAge] = React.useState(localStorage.getItem('userAge') || '')
+  const [gender, setGender] = React.useState(localStorage.getItem('userGender') || '')
+  const [phone, setPhone] = React.useState(localStorage.getItem('userPhone') || '')
   const [saving, setSaving] = React.useState(false)
 
+  const isValid = name.trim() && age && parseInt(age) >= 18 && parseInt(age) <= 60 && gender && /^\d{10}$/.test(phone)
+
   const handleNext = async () => {
-    const trimmed = name.trim()
-    if (!trimmed) return
+    if (!isValid) return
     setSaving(true)
     const userId = localStorage.getItem('userId')
     try {
-      await surveyAPI.saveName(userId, trimmed)
-      localStorage.setItem('userName', trimmed)
+      await surveyAPI.saveBasicInfo(userId, { name: name.trim(), age: parseInt(age), gender, phone })
+      localStorage.setItem('userName', name.trim())
+      localStorage.setItem('userAge', age)
+      localStorage.setItem('userGender', gender)
+      localStorage.setItem('userPhone', phone)
       onNext()
     } finally {
       setSaving(false)
     }
   }
 
+  const inputStyle = { width: '100%', padding: '13px 16px', borderRadius: 'var(--radius-sm)', border: '2px solid var(--border)', fontSize: 15, fontWeight: 500, outline: 'none', boxSizing: 'border-box', color: 'var(--text)', fontFamily: 'inherit', transition: 'border-color 0.15s', background: 'var(--white)' }
+  const labelStyle = { fontSize: 13, fontWeight: 700, color: 'var(--text-2)', marginBottom: 8, display: 'block' }
+
   return (
-    <div style={{ background: 'var(--white)', borderRadius: 'var(--radius)', padding: '40px 28px', width: '100%', maxWidth: 520, boxShadow: 'var(--shadow-md)', animation: 'fadeIn 0.3s ease' }}>
-      <h2 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', marginBottom: 8, letterSpacing: -0.5 }}>What's your name?</h2>
-      <p style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 28, fontWeight: 500 }}>This is how your matches will see you.</p>
-      <input
-        autoFocus
-        style={{ width: '100%', padding: '14px 16px', borderRadius: 'var(--radius-sm)', border: '2px solid var(--border)', fontSize: 18, fontWeight: 600, outline: 'none', boxSizing: 'border-box', marginBottom: 20, color: 'var(--text)', fontFamily: 'inherit', transition: 'border-color 0.15s' }}
-        placeholder="e.g. Priya"
-        value={name}
-        onChange={e => setName(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && handleNext()}
-        onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-        onBlur={e => e.target.style.borderColor = 'var(--border)'}
-      />
-      <button onClick={handleNext} disabled={!name.trim() || saving}
-        style={{ ...S.btnPrimary, width: '100%', padding: '14px', fontSize: 16, opacity: !name.trim() || saving ? 0.5 : 1 }}>
+    <div style={{ background: 'var(--white)', borderRadius: 'var(--radius)', padding: '36px 28px', width: '100%', maxWidth: 520, boxShadow: 'var(--shadow-md)', animation: 'fadeIn 0.3s ease' }}>
+      <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 6, letterSpacing: -0.5 }}>Tell us about yourself</h2>
+      <p style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 28, fontWeight: 500 }}>This helps your matches know who they're connecting with.</p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {/* Name */}
+        <div>
+          <label style={labelStyle}>Full name</label>
+          <input style={inputStyle} placeholder="e.g. Priya Sharma" value={name}
+            onChange={e => setName(e.target.value)}
+            onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+            onBlur={e => e.target.style.borderColor = 'var(--border)'} />
+        </div>
+
+        {/* Age + Phone side by side */}
+        <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle}>Age</label>
+            <input style={inputStyle} type="number" placeholder="e.g. 24" min={18} max={60} value={age}
+              onChange={e => setAge(e.target.value)}
+              onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle}>Phone number</label>
+            <input style={inputStyle} type="tel" placeholder="10-digit number" maxLength={10} value={phone}
+              onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
+              onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'} />
+          </div>
+        </div>
+
+        {/* Gender */}
+        <div>
+          <label style={labelStyle}>Gender</label>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {['male', 'female', 'other'].map(g => (
+              <button key={g} onClick={() => setGender(g)}
+                style={{ flex: 1, padding: '11px 0', border: `2px solid ${gender === g ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 10, background: gender === g ? 'var(--primary-light)' : 'var(--white)', fontSize: 14, fontWeight: gender === g ? 700 : 500, color: gender === g ? 'var(--primary)' : 'var(--text)', cursor: 'pointer', textTransform: 'capitalize', transition: 'all 0.15s' }}>
+                {g === 'male' ? '♂ Male' : g === 'female' ? '♀ Female' : '⚧ Other'}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <button onClick={handleNext} disabled={!isValid || saving}
+        style={{ ...S.btnPrimary, width: '100%', padding: '14px', fontSize: 16, marginTop: 28, opacity: !isValid || saving ? 0.4 : 1 }}>
         {saving ? 'Saving…' : 'Continue →'}
       </button>
     </div>
@@ -121,8 +164,8 @@ export default function Dashboard() {
           survey.loadFromLocalStorage(userId)
         }
 
-        const hasName = !!localStorage.getItem('userName')
-        survey.setCurrentStep(hasName ? 'mandatory' : 'name')
+        const hasBasicInfo = !!(localStorage.getItem('userName') && localStorage.getItem('userAge') && localStorage.getItem('userGender') && localStorage.getItem('userPhone'))
+        survey.setCurrentStep(hasBasicInfo ? 'mandatory' : 'name')
         setLoading(false)
       } catch (err) {
         setError(err.message || 'Failed to initialize survey')
@@ -222,7 +265,7 @@ export default function Dashboard() {
       {/* Content */}
       <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 16px 0' }}>
         {survey.currentStep === 'name' && (
-          <NameScreen onNext={() => survey.setCurrentStep('mandatory')} />
+          <BasicInfoScreen onNext={() => survey.setCurrentStep('mandatory')} />
         )}
         {survey.currentStep === 'mandatory' && (
           <SurveyCard questions={survey.allQuestions?.mandatory || {}} onNext={handleMandatoryNext} onBack={() => navigate('/')} />

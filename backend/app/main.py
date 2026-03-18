@@ -8,6 +8,24 @@ from app.models import LifestyleTag, LifestyleCategory
 # Initialize database tables
 Base.metadata.create_all(bind=engine)
 
+# Add new columns to existing tables if they don't exist yet
+def run_migrations():
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS age INTEGER"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(15)"))
+        conn.execute(text("""
+            DO $$ BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'usergender') THEN
+                    CREATE TYPE usergender AS ENUM ('male', 'female', 'other');
+                END IF;
+            END$$;
+        """))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS gender usergender"))
+        conn.commit()
+
+run_migrations()
+
 # Seed lifestyle tags if not already present
 def seed_lifestyle_tags():
     from app.database import SessionLocal
