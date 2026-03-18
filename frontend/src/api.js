@@ -178,6 +178,10 @@ export const swipesAPI = {
   getMatches: async (userId) => {
     const response = await api.get(`/api/swipes/${userId}/matches`)
     return response.data.data
+  },
+  unmatch: async (userId, matchId) => {
+    const response = await api.delete(`/api/swipes/${userId}/matches/${matchId}`)
+    return response.data.data
   }
 }
 

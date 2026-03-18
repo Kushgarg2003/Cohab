@@ -135,17 +135,17 @@ export default function Dashboard() {
         survey.setSurveyId(surveyData.survey_id)
 
         // Fetch questions (cached) and profile in parallel
-        const cachedQuestions = localStorage.getItem('surveyQuestions')
+        const cachedQuestions = localStorage.getItem('surveyQuestions_v2')
         const [questions, profile] = await Promise.all([
-          cachedQuestions ? Promise.resolve(JSON.parse(cachedQuestions)) : surveyAPI.getQuestions().then(q => { localStorage.setItem('surveyQuestions', JSON.stringify(q)); return q }),
+          cachedQuestions ? Promise.resolve(JSON.parse(cachedQuestions)) : surveyAPI.getQuestions().then(q => { localStorage.setItem('surveyQuestions_v2', JSON.stringify(q)); return q }),
           surveyAPI.getUserProfile(userId).catch(() => null)
         ])
         survey.setAllQuestions(questions)
         if (profile?.survey) {
           const s = profile.survey
-          if (s.budget_range || s.locations?.length) {
+          if (s.budget_ranges?.length || s.budget_range || s.locations?.length) {
             survey.setMandatoryData({
-              budget_range: s.budget_range || null,
+              budget_ranges: s.budget_ranges?.length ? s.budget_ranges : (s.budget_range ? [s.budget_range] : []),
               locations: s.locations || [],
               move_in_timeline: s.move_in_timeline || null,
               occupancy_type: s.occupancy_type || null,

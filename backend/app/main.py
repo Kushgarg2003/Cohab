@@ -13,6 +13,7 @@ def run_migrations():
     from sqlalchemy import text
     with engine.connect() as conn:
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE"))
+        conn.execute(text("ALTER TABLE survey_responses ADD COLUMN IF NOT EXISTS budget_ranges JSONB"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(15)"))
         conn.execute(text("""
             DO $$ BEGIN

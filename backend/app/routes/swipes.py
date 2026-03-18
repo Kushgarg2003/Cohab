@@ -113,7 +113,7 @@ def get_swipe_queue(user_id: UUID, db: Session = Depends(get_db)):
             "score": score,
             "breakdown": match.breakdown if match else {},
             "survey_snapshot": {
-                "budget_range": survey.budget_range.value if survey and survey.budget_range else None,
+                "budget_range": (survey.budget_ranges[0] if survey and survey.budget_ranges else (survey.budget_range.value if survey and survey.budget_range else None)),
                 "locations": survey.locations or [] if survey else [],
                 "move_in_timeline": survey.move_in_timeline.value if survey and survey.move_in_timeline else None,
                 "occupancy_type": survey.occupancy_type.value if survey and survey.occupancy_type else None,
@@ -244,6 +244,30 @@ def record_swipe(user_id: UUID, payload: dict, db: Session = Depends(get_db)):
         },
         message="It's a match!" if mutual else "Swipe recorded"
     )
+
+
+@router.delete("/{user_id}/matches/{match_id}", response_model=APIResponse)
+def unmatch(user_id: UUID, match_id: UUID, db: Session = Depends(get_db)):
+    """Remove a mutual match and leave the associated group."""
+    from sqlalchemy import or_
+    match = db.query(MutualMatch).filter(
+        MutualMatch.id == match_id,
+        or_(MutualMatch.user_a_id == user_id, MutualMatch.user_b_id == user_id)
+    ).first()
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+
+    group_id = match.group_id
+    db.delete(match)
+
+    if group_id:
+        db.query(GroupMember).filter(
+            GroupMember.group_id == group_id,
+            GroupMember.user_id == user_id
+        ).delete()
+
+    db.commit()
+    return APIResponse(status="success", data={}, message="Unmatched successfully")
 
 
 @router.get("/{user_id}/matches", response_model=APIResponse)

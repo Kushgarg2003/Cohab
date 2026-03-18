@@ -29,7 +29,7 @@ class UserResponse(BaseModel):
 # ========== Mandatory Survey Schemas ==========
 
 class MandatoryDataRequest(BaseModel):
-    budget_range: BudgetRange
+    budget_ranges: List[str] = Field(..., min_items=1)
     locations: List[str] = Field(..., min_items=1)
     move_in_timeline: MoveInTimeline
     occupancy_type: OccupancyType

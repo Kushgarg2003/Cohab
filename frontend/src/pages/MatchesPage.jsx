@@ -161,6 +161,15 @@ export default function MatchesPage() {
     }).catch(err => { setError(err.message); setLoading(false) })
   }, [userId])
 
+  const handleUnmatch = async (matchId) => {
+    try {
+      await swipesAPI.unmatch(userId, matchId)
+      setMutualMatches(prev => prev.filter(m => m.match_id !== matchId))
+    } catch (e) {
+      console.error('Failed to unmatch', e)
+    }
+  }
+
   const handleSwipe = useCallback(async (action) => {
     if (swiping || currentIndex >= queue.length) return
     const person = queue[currentIndex]
@@ -307,12 +316,18 @@ export default function MatchesPage() {
                     <Avatar userId={m.user_id} name={m.name} picture={m.picture} size={36} />
                     <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{m.name || 'Anonymous'}</span>
                   </div>
-                  {m.group_id && (
-                    <button onClick={() => navigate(`/group/${m.group_id}/chat`)}
-                      style={{ background: 'var(--primary-light)', color: 'var(--primary)', border: '1px solid rgba(232,72,28,0.2)', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                      💬 Chat
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {m.group_id && (
+                      <button onClick={() => navigate(`/group/${m.group_id}/chat`)}
+                        style={{ background: 'var(--primary-light)', color: 'var(--primary)', border: '1px solid rgba(232,72,28,0.2)', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                        💬 Chat
+                      </button>
+                    )}
+                    <button onClick={() => handleUnmatch(m.match_id)}
+                      style={{ background: 'var(--surface-2)', color: 'var(--text-3)', border: '1px solid var(--border-2)', padding: '6px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                      Unmatch
                     </button>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>

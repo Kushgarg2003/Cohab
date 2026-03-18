@@ -31,7 +31,7 @@ def calculate_completion_percentage(survey: SurveyResponse) -> float:
     total_sections = 5
     completed = 0
 
-    if survey.budget_range and survey.locations and survey.move_in_timeline and survey.occupancy_type:
+    if (survey.budget_ranges or survey.budget_range) and survey.locations and survey.move_in_timeline and survey.occupancy_type:
         completed += 1
     if survey.social_battery or survey.habits or survey.work_study:
         completed += 1
@@ -71,8 +71,8 @@ def get_all_questions(db: Session = Depends(get_db)):
     questions = {
         "mandatory": {
             "budget_range": {
-                "label": "What's your monthly rent ceiling?",
-                "options": ["10k-25k", "25k-50k", "50k-1L", "1L+"]
+                "label": "What's your monthly rent budget?",
+                "options": ["10k-15k", "15k-20k", "20k-30k", "30k-50k", "50k+"]
             },
             "locations": {
                 "label": "Where do you need to be near?",
@@ -169,7 +169,7 @@ def save_mandatory_data(survey_id: UUID, data: MandatoryDataRequest, db: Session
     survey = get_survey_or_404(survey_id, db)
 
     try:
-        survey.budget_range = data.budget_range
+        survey.budget_ranges = data.budget_ranges
         survey.locations = data.locations
         survey.move_in_timeline = data.move_in_timeline
         survey.occupancy_type = data.occupancy_type
@@ -182,7 +182,7 @@ def save_mandatory_data(survey_id: UUID, data: MandatoryDataRequest, db: Session
             status="success",
             data={
                 "survey_id": str(survey.id),
-                "budget_range": survey.budget_range,
+                "budget_ranges": survey.budget_ranges,
                 "locations": survey.locations,
                 "move_in_timeline": survey.move_in_timeline,
                 "occupancy_type": survey.occupancy_type,
@@ -337,7 +337,7 @@ def survey_status(survey_id: UUID, db: Session = Depends(get_db)):
     completion = calculate_completion_percentage(survey)
     sections = {
         "mandatory": bool(
-            survey.budget_range and survey.locations and
+            (survey.budget_ranges or survey.budget_range) and survey.locations and
             survey.move_in_timeline and survey.occupancy_type
         ),
         "lifestyle": bool(survey.social_battery or survey.habits or survey.work_study),

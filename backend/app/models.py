@@ -78,7 +78,8 @@ class SurveyResponse(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), unique=True, nullable=False)
 
     # Hard constraints (mandatory)
-    budget_range = Column(SQLEnum(BudgetRange), nullable=True)
+    budget_range = Column(SQLEnum(BudgetRange), nullable=True)  # legacy, kept for compat
+    budget_ranges = Column(JSON, nullable=True)  # List of selected budget ranges
     locations = Column(JSON, nullable=True)  # List of location hubs
     move_in_timeline = Column(SQLEnum(MoveInTimeline), nullable=True)
     occupancy_type = Column(SQLEnum(OccupancyType), nullable=True)

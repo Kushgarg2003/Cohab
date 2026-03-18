@@ -3,10 +3,16 @@ from app.models import SurveyResponse
 # ========== Compatibility Matrices ==========
 
 BUDGET_ADJACENCY = {
-    "10k-25k":  {"10k-25k", "25k-50k"},
-    "25k-50k":  {"10k-25k", "25k-50k", "50k-1L"},
-    "50k-1L":   {"25k-50k", "50k-1L", "1L+"},
-    "1L+":      {"50k-1L", "1L+"},
+    "10k-15k":  {"10k-15k", "15k-20k"},
+    "15k-20k":  {"10k-15k", "15k-20k", "20k-30k"},
+    "20k-30k":  {"15k-20k", "20k-30k", "30k-50k"},
+    "30k-50k":  {"20k-30k", "30k-50k", "50k+"},
+    "50k+":     {"30k-50k", "50k+"},
+    # Legacy support
+    "10k-25k":  {"10k-25k", "25k-50k", "10k-15k", "15k-20k", "20k-30k"},
+    "25k-50k":  {"10k-25k", "25k-50k", "50k-1L", "20k-30k", "30k-50k"},
+    "50k-1L":   {"25k-50k", "50k-1L", "1L+", "30k-50k", "50k+"},
+    "1L+":      {"50k-1L", "1L+", "50k+"},
 }
 
 TIMELINE_ADJACENCY = {
@@ -117,12 +123,14 @@ def compute_match_score(a: SurveyResponse, b: SurveyResponse,
         return {"score": 0, "breakdown": {"disqualified": "no_city_overlap",
                 "hard_constraints": 0, "dealbreakers": 0, "lifestyle": 0}}
 
-    # Gate 2: Budget adjacency (skip gate if either hasn't filled it)
-    budget_a = a.budget_range.value if a.budget_range else None
-    budget_b = b.budget_range.value if b.budget_range else None
-    if budget_a and budget_b and budget_b not in BUDGET_ADJACENCY.get(budget_a, set()):
-        return {"score": 0, "breakdown": {"disqualified": "budget_mismatch",
-                "hard_constraints": 0, "dealbreakers": 0, "lifestyle": 0}}
+    # Gate 2: Budget adjacency — supports multi-range (any overlap = pass)
+    ranges_a = list(a.budget_ranges or ([a.budget_range.value] if a.budget_range else []))
+    ranges_b = list(b.budget_ranges or ([b.budget_range.value] if b.budget_range else []))
+    if ranges_a and ranges_b:
+        adjacent = any(rb in BUDGET_ADJACENCY.get(ra, set()) for ra in ranges_a for rb in ranges_b)
+        if not adjacent:
+            return {"score": 0, "breakdown": {"disqualified": "budget_mismatch",
+                    "hard_constraints": 0, "dealbreakers": 0, "lifestyle": 0}}
 
     # Gate 3: Move-in timeline adjacency
     timeline_a = a.move_in_timeline.value if a.move_in_timeline else None
@@ -161,8 +169,9 @@ def compute_match_score(a: SurveyResponse, b: SurveyResponse,
     area_jaccard = _jaccard(list(set_a), list(set_b))
     location_pts = round(area_jaccard * 15, 2)
 
-    # Budget quality (10 pts) — exact match scores more than adjacent
-    budget_pts = 10 if budget_a and budget_a == budget_b else 5
+    # Budget quality (10 pts) — exact overlap scores more than adjacent only
+    exact_overlap = any(ra == rb for ra in ranges_a for rb in ranges_b)
+    budget_pts = 10 if exact_overlap else 5
 
     # Dealbreaker quality (20 pts) — partial 0.5 matches reduce score
     dealbreaker_pts = round((pets_c + smoking_c + dietary_c + gender_c) / 4 * 20, 2)

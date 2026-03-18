@@ -17,7 +17,7 @@ export default function SurveyCard({ questions, onNext, onBack }) {
   useEffect(() => { setSelectedCity(null) }, [step])
 
   const fields = [
-    { key: 'budget_range', label: questions?.budget_range?.label, options: questions?.budget_range?.options },
+    { key: 'budget_ranges', label: questions?.budget_range?.label, options: questions?.budget_range?.options, isSimpleMulti: true },
     { key: 'locations', label: questions?.locations?.label, options: questions?.locations?.options, isMulti: true },
     { key: 'move_in_timeline', label: questions?.move_in_timeline?.label, options: questions?.move_in_timeline?.options },
     { key: 'occupancy_type', label: questions?.occupancy_type?.label, options: questions?.occupancy_type?.options }
@@ -31,6 +31,10 @@ export default function SurveyCard({ questions, onNext, onBack }) {
         ? mandatoryData.locations.filter(l => l !== value)
         : [...mandatoryData.locations, value]
       setMandatoryData({ locations })
+    } else if (currentField.isSimpleMulti) {
+      const ranges = mandatoryData.budget_ranges || []
+      const updated = ranges.includes(value) ? ranges.filter(r => r !== value) : [...ranges, value]
+      setMandatoryData({ budget_ranges: updated })
     } else {
       setMandatoryData({ [currentField.key]: mandatoryData[currentField.key] === value ? null : value })
     }
@@ -46,13 +50,17 @@ export default function SurveyCard({ questions, onNext, onBack }) {
     else onBack()
   }
 
-  const isAnswered = () => currentField.isMulti
-    ? selectedCity !== null && mandatoryData.locations.length > 0
-    : mandatoryData[currentField.key] !== null
+  const isAnswered = () => {
+    if (currentField.isMulti) return selectedCity !== null && mandatoryData.locations.length > 0
+    if (currentField.isSimpleMulti) return (mandatoryData.budget_ranges || []).length > 0
+    return mandatoryData[currentField.key] !== null
+  }
 
-  const isSelected = (option) => currentField.isMulti
-    ? mandatoryData.locations.includes(option)
-    : mandatoryData[currentField.key] === option
+  const isSelected = (option) => {
+    if (currentField.isMulti) return mandatoryData.locations.includes(option)
+    if (currentField.isSimpleMulti) return (mandatoryData.budget_ranges || []).includes(option)
+    return mandatoryData[currentField.key] === option
+  }
 
   return (
     <div style={S.card}>
@@ -64,9 +72,21 @@ export default function SurveyCard({ questions, onNext, onBack }) {
       </div>
 
       <h2 style={S.question}>{currentField.label}</h2>
-      {currentField.isMulti && <p style={S.hint}>Select all that apply</p>}
+      {(currentField.isMulti || currentField.isSimpleMulti) && <p style={S.hint}>Select all that apply</p>}
 
-      {currentField.isMulti ? (
+      {currentField.isSimpleMulti ? (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 32 }}>
+          {currentField.options?.map(option => {
+            const selected = isSelected(option)
+            return (
+              <button key={option} onClick={() => handleSelect(option)}
+                style={{ ...S.chip, ...(selected ? S.chipSelected : {}) }}>
+                {selected && <span style={{ marginRight: 4 }}>✓</span>}{option}
+              </button>
+            )
+          })}
+        </div>
+      ) : currentField.isMulti ? (
         <div style={{ marginBottom: 32 }}>
           {(() => {
             const options = currentField.options || []

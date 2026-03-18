@@ -8,7 +8,7 @@ const useSurvey = create((set, get) => ({
 
   // Survey Data
   mandatoryData: {
-    budget_range: null,
+    budget_ranges: [],
     locations: [],
     move_in_timeline: null,
     occupancy_type: null
@@ -81,7 +81,7 @@ const useSurvey = create((set, get) => ({
   resetSurvey: () => set({
     currentStep: 'start',
     mandatoryData: {
-      budget_range: null,
+      budget_ranges: [],
       locations: [],
       move_in_timeline: null,
       occupancy_type: null
@@ -138,7 +138,7 @@ const useSurvey = create((set, get) => ({
     const total = 5
 
     // Check mandatory
-    if (state.mandatoryData.budget_range &&
+    if ((state.mandatoryData.budget_ranges?.length > 0) &&
         state.mandatoryData.locations.length > 0 &&
         state.mandatoryData.move_in_timeline &&
         state.mandatoryData.occupancy_type) {
