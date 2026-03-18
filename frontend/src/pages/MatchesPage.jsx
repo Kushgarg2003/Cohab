@@ -226,9 +226,11 @@ export default function MatchesPage() {
 
       {/* Header */}
       <div style={{ background: 'rgba(12,12,16,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
-        <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.5 }}>
-          Coloc<span style={{ color: 'var(--primary)' }}>sy</span>
-        </span>
+        <button onClick={() => navigate('/matches')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+          <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.5 }}>
+            Coloc<span style={{ color: 'var(--primary)' }}>sy</span>
+          </span>
+        </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {mutualMatches.length > 0 && (
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)', background: 'var(--green-light)', padding: '4px 10px', borderRadius: 20 }}>

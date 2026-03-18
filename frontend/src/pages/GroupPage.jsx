@@ -23,7 +23,9 @@ const Topbar = ({ backTo, backLabel }) => {
   const navigate = useNavigate()
   return (
     <div style={S.topbar}>
-      <span style={S.logo}>Co<span style={{ color: 'var(--primary)' }}>hab</span></span>
+      <button onClick={() => navigate('/matches')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+        <span style={S.logo}>Coloc<span style={{ color: 'var(--primary)' }}>sy</span></span>
+      </button>
       <button onClick={() => navigate(backTo)} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
         ← {backLabel}
       </button>
@@ -187,16 +189,20 @@ export function GroupDashboardPage() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <button onClick={() => navigate(`/group/${groupId}/chat`)} style={{ ...S.btnPrimary, width: '100%', padding: '14px', fontSize: 15 }}>
-            💬 Group chat →
-          </button>
-          <button onClick={() => navigate(`/group/${groupId}/kit`)} style={{ ...S.btnOutline, width: '100%', padding: '14px', fontSize: 15 }}>
-            🧰 The Kit — items & debts →
-          </button>
-          <button onClick={() => navigate(`/group/${groupId}/wishlist`)} style={{ ...S.btnOutline, width: '100%', padding: '14px', fontSize: 15 }}>
-            🏠 Property wishlist →
-          </button>
+        {/* Feature shortcuts */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 4 }}>
+          {[
+            { icon: '💬', label: 'Chat', desc: 'Group chat', path: `/group/${groupId}/chat`, primary: true },
+            { icon: '🧰', label: 'Kit', desc: 'Items & debts', path: `/group/${groupId}/kit` },
+            { icon: '🏠', label: 'Property', desc: 'Wishlist & votes', path: `/group/${groupId}/wishlist` },
+          ].map(f => (
+            <button key={f.path} onClick={() => navigate(f.path)}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '18px 8px', borderRadius: 14, border: `1.5px solid ${f.primary ? 'var(--primary)' : 'var(--border-2)'}`, background: f.primary ? 'var(--primary)' : 'var(--surface)', cursor: 'pointer', transition: 'all 0.15s' }}>
+              <span style={{ fontSize: 26 }}>{f.icon}</span>
+              <span style={{ fontSize: 13, fontWeight: 800, color: f.primary ? 'white' : 'var(--text)', letterSpacing: -0.2 }}>{f.label}</span>
+              <span style={{ fontSize: 10, color: f.primary ? 'rgba(255,255,255,0.75)' : 'var(--text-3)', fontWeight: 500 }}>{f.desc}</span>
+            </button>
+          ))}
         </div>
       </div>
       <BottomNav />

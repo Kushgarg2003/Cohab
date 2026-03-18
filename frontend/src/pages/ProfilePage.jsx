@@ -54,12 +54,19 @@ export default function ProfilePage() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: 80 }}>
       {/* Header */}
       <div style={{ background: 'rgba(12,12,16,0.95)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
-        <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.3 }}>
-          Coloc<span style={{ color: 'var(--primary)' }}>sy</span>
-        </span>
-        <button onClick={handleSignOut} style={{ background: 'var(--surface-2)', border: '1px solid var(--border-2)', color: 'var(--text-3)', fontWeight: 600, cursor: 'pointer', fontSize: 13, padding: '7px 14px', borderRadius: 8 }}>
-          Sign out
+        <button onClick={() => navigate('/matches')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+          <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.3 }}>
+            Coloc<span style={{ color: 'var(--primary)' }}>sy</span>
+          </span>
         </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button onClick={() => navigate(-1)} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)', fontWeight: 600, cursor: 'pointer', fontSize: 13, padding: '7px 14px', borderRadius: 8 }}>
+            ← Back
+          </button>
+          <button onClick={handleSignOut} style={{ background: 'var(--surface-2)', border: '1px solid var(--border-2)', color: 'var(--text-3)', fontWeight: 600, cursor: 'pointer', fontSize: 13, padding: '7px 14px', borderRadius: 8 }}>
+            Sign out
+          </button>
+        </div>
       </div>
 
       <div style={{ maxWidth: 520, margin: '0 auto', padding: '24px 16px' }}>
