@@ -18,6 +18,7 @@ export default function LandingPage() {
   // Pre-warm the Render backend on page load to avoid cold-start lag on sign-in
   useEffect(() => {
     api.get('/health').catch(() => {})
+    api.get('/api/survey/questions').catch(() => {})
   }, [])
 
   const handleSuccess = async (credentialResponse) => {

@@ -77,11 +77,35 @@ def get_swipe_queue(user_id: UUID, db: Session = Depends(get_db)):
 
     candidates = unswiped if unswiped else revisit_passes
 
+    if not candidates:
+        return APIResponse(status="success",
+            data={"queue": [], "total": 0, "is_revisit": len(unswiped) == 0},
+            message="0 users in queue")
+
+    # Batch fetch all surveys and cached scores in one query each
+    candidate_ids = [u.id for u in candidates]
+    surveys_map = {s.user_id: s for s in db.query(SurveyResponse).filter(SurveyResponse.user_id.in_(candidate_ids)).all()}
+
+    a_id_str = str(user_id)
+    sorted_pairs = [tuple(sorted([a_id_str, str(oid)])) for oid in candidate_ids]
+    from sqlalchemy import and_, or_, tuple_ as sql_tuple
+    cached_scores = db.query(MatchScore).filter(
+        or_(*[and_(MatchScore.user_a_id == UUID(p[0]), MatchScore.user_b_id == UUID(p[1])) for p in sorted_pairs])
+    ).all() if sorted_pairs else []
+    scores_map = {(str(m.user_a_id), str(m.user_b_id)): m for m in cached_scores}
+
+    user_gender = user.gender.value if user.gender else None
+
     queue = []
     for other in candidates:
-        match = _get_or_compute_score(user_id, other.id, db)
+        pair = tuple(sorted([a_id_str, str(other.id)]))
+        match = scores_map.get(pair)
+        if not match:
+            match = _get_or_compute_score(user_id, other.id, db)
+            if match:
+                scores_map[pair] = match
         score = match.score if match else 0
-        survey = db.query(SurveyResponse).filter(SurveyResponse.user_id == other.id).first()
+        survey = surveys_map.get(other.id)
         queue.append({
             "user_id": str(other.id),
             "name": other.name,
@@ -201,12 +225,15 @@ def record_swipe(user_id: UUID, payload: dict, db: Session = Depends(get_db)):
                 mutual = True
                 group_id = str(new_group.id)
 
-                # Email both matched users
+                # Email both matched users — fire and forget in background thread
                 from app.email_service import send_match_email
-                if user_a.email:
-                    send_match_email(user_a.email, user_a.name or "", user_b.name or "Your match", group_id)
-                if user_b.email:
-                    send_match_email(user_b.email, user_b.name or "", user_a.name or "Your match", group_id)
+                import threading
+                def _send_match_emails():
+                    if user_a.email:
+                        send_match_email(user_a.email, user_a.name or "", user_b.name or "Your match", group_id)
+                    if user_b.email:
+                        send_match_email(user_b.email, user_b.name or "", user_a.name or "Your match", group_id)
+                threading.Thread(target=_send_match_emails, daemon=True).start()
 
     return APIResponse(
         status="success",

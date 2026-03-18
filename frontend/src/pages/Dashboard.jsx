@@ -134,11 +134,13 @@ export default function Dashboard() {
         }
         survey.setSurveyId(surveyData.survey_id)
 
-        const questions = await surveyAPI.getQuestions()
+        // Fetch questions (cached) and profile in parallel
+        const cachedQuestions = localStorage.getItem('surveyQuestions')
+        const [questions, profile] = await Promise.all([
+          cachedQuestions ? Promise.resolve(JSON.parse(cachedQuestions)) : surveyAPI.getQuestions().then(q => { localStorage.setItem('surveyQuestions', JSON.stringify(q)); return q }),
+          surveyAPI.getUserProfile(userId).catch(() => null)
+        ])
         survey.setAllQuestions(questions)
-
-        // Pre-fill from backend if survey already has data
-        const profile = await surveyAPI.getUserProfile(userId).catch(() => null)
         if (profile?.survey) {
           const s = profile.survey
           if (s.budget_range || s.locations?.length) {

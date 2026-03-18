@@ -49,7 +49,8 @@ def google_auth(payload: dict, db: Session = Depends(get_db)):
 
     if is_new_user and user.email:
         from app.email_service import send_welcome_email
-        send_welcome_email(user.email, user.name or "")
+        import threading
+        threading.Thread(target=send_welcome_email, args=(user.email, user.name or ""), daemon=True).start()
 
     token = create_access_token(str(user.id))
 

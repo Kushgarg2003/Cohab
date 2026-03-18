@@ -62,7 +62,7 @@ export default function ChatPage() {
     fetchMessages()
 
     // Poll every 3 seconds
-    pollingRef.current = setInterval(() => fetchMessages(true), 3000)
+    pollingRef.current = setInterval(() => fetchMessages(true), 5000)
     return () => clearInterval(pollingRef.current)
   }, [groupId, userId, fetchMessages, navigate])
 

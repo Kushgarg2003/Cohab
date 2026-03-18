@@ -22,6 +22,13 @@ def run_migrations():
             END$$;
         """))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS gender usergender"))
+        # Indexes for high-frequency queries
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_swipes_swiper ON user_swipes (swiper_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_swipes_target ON user_swipes (target_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_mutual_matches_a ON mutual_matches (user_a_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_mutual_matches_b ON mutual_matches (user_b_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_messages_group ON messages (group_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_match_scores_pair ON match_scores (user_a_id, user_b_id)"))
         conn.commit()
 
 run_migrations()
