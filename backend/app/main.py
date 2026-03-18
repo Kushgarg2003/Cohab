@@ -12,7 +12,7 @@ Base.metadata.create_all(bind=engine)
 def run_migrations():
     from sqlalchemy import text
     with engine.connect() as conn:
-        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS age INTEGER"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(15)"))
         conn.execute(text("""
             DO $$ BEGIN

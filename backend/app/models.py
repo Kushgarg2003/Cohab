@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, JSON, ForeignKey, Enum as SQLEnum, UniqueConstraint, or_
+from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Date, JSON, ForeignKey, Enum as SQLEnum, UniqueConstraint, or_
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -58,7 +58,7 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     survey_completed = Column(Boolean, default=False)
     name = Column(String(100), nullable=True)
-    age = Column(Integer, nullable=True)
+    date_of_birth = Column(Date, nullable=True)
     phone = Column(String(15), nullable=True)
     gender = Column(SQLEnum(UserGender), nullable=True)
     google_id = Column(String(255), unique=True, nullable=True)

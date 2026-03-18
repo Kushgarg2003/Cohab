@@ -5,21 +5,25 @@ import { surveyAPI } from '../api'
 
 function BasicInfoScreen({ onNext }) {
   const [name, setName] = React.useState(localStorage.getItem('userName') || '')
-  const [age, setAge] = React.useState(localStorage.getItem('userAge') || '')
+  const [dob, setDob] = React.useState(localStorage.getItem('userDOB') || '')
   const [gender, setGender] = React.useState(localStorage.getItem('userGender') || '')
   const [phone, setPhone] = React.useState(localStorage.getItem('userPhone') || '')
   const [saving, setSaving] = React.useState(false)
 
-  const isValid = name.trim() && age && parseInt(age) >= 18 && parseInt(age) <= 60 && gender && /^\d{10}$/.test(phone)
+  const today = new Date()
+  const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate()).toISOString().split('T')[0]
+  const minDate = new Date(today.getFullYear() - 60, today.getMonth(), today.getDate()).toISOString().split('T')[0]
+
+  const isValid = name.trim() && dob && gender && /^\d{10}$/.test(phone)
 
   const handleNext = async () => {
     if (!isValid) return
     setSaving(true)
     const userId = localStorage.getItem('userId')
     try {
-      await surveyAPI.saveBasicInfo(userId, { name: name.trim(), age: parseInt(age), gender, phone })
+      await surveyAPI.saveBasicInfo(userId, { name: name.trim(), date_of_birth: dob, gender, phone })
       localStorage.setItem('userName', name.trim())
-      localStorage.setItem('userAge', age)
+      localStorage.setItem('userDOB', dob)
       localStorage.setItem('userGender', gender)
       localStorage.setItem('userPhone', phone)
       onNext()
@@ -46,12 +50,12 @@ function BasicInfoScreen({ onNext }) {
             onBlur={e => e.target.style.borderColor = 'var(--border)'} />
         </div>
 
-        {/* Age + Phone side by side */}
+        {/* DOB + Phone side by side */}
         <div style={{ display: 'flex', gap: 12 }}>
           <div style={{ flex: 1 }}>
-            <label style={labelStyle}>Age</label>
-            <input style={inputStyle} type="number" placeholder="e.g. 24" min={18} max={60} value={age}
-              onChange={e => setAge(e.target.value)}
+            <label style={labelStyle}>Date of birth</label>
+            <input style={inputStyle} type="date" min={minDate} max={maxDate} value={dob}
+              onChange={e => setDob(e.target.value)}
               onFocus={e => e.target.style.borderColor = 'var(--primary)'}
               onBlur={e => e.target.style.borderColor = 'var(--border)'} />
           </div>
@@ -164,7 +168,7 @@ export default function Dashboard() {
           survey.loadFromLocalStorage(userId)
         }
 
-        const hasBasicInfo = !!(localStorage.getItem('userName') && localStorage.getItem('userAge') && localStorage.getItem('userGender') && localStorage.getItem('userPhone'))
+        const hasBasicInfo = !!(localStorage.getItem('userName') && localStorage.getItem('userDOB') && localStorage.getItem('userGender') && localStorage.getItem('userPhone'))
         survey.setCurrentStep(hasBasicInfo ? 'mandatory' : 'name')
         setLoading(false)
       } catch (err) {

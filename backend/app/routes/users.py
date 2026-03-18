@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
+from datetime import date, datetime
 from app.database import get_db
 from app.models import User, SurveyResponse, UserGender
 from app.schemas import UserResponse, APIResponse, UserCreate
@@ -80,17 +81,22 @@ def update_basic_info(user_id: UUID, payload: dict, db: Session = Depends(get_db
     name = (payload.get("name") or "").strip()
     if not name:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Name cannot be empty")
-    age = payload.get("age")
-    if age is not None:
+    dob_str = payload.get("date_of_birth")
+    dob = None
+    if dob_str:
         try:
-            age = int(age)
-        except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid age")
+            dob = datetime.strptime(dob_str, "%Y-%m-%d").date()
+            today = date.today()
+            age = (today - dob).days // 365
+            if age < 18 or age > 60:
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Must be between 18 and 60 years old")
+        except ValueError:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid date format, use YYYY-MM-DD")
     phone = (payload.get("phone") or "").strip() or None
     gender_val = payload.get("gender")
     gender = UserGender(gender_val) if gender_val in [g.value for g in UserGender] else None
     user.name = name
-    user.age = age
+    user.date_of_birth = dob
     user.phone = phone
     user.gender = gender
     db.commit()

@@ -47,8 +47,8 @@ export const surveyAPI = {
   },
 
   // Save basic info (name, age, gender, phone)
-  saveBasicInfo: async (userId, { name, age, gender, phone }) => {
-    const response = await api.patch(`/api/users/${userId}/basic-info`, { name, age, gender, phone })
+  saveBasicInfo: async (userId, { name, date_of_birth, gender, phone }) => {
+    const response = await api.patch(`/api/users/${userId}/basic-info`, { name, date_of_birth, gender, phone })
     return response.data.data
   },
 
