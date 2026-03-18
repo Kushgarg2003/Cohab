@@ -154,6 +154,16 @@ def record_swipe(user_id: UUID, payload: dict, db: Session = Depends(get_db)):
         ).first()
 
         if other_liked:
+            # Enforce 3-match limit for both users
+            def match_count(uid):
+                return db.query(MutualMatch).filter(
+                    (MutualMatch.user_a_id == uid) | (MutualMatch.user_b_id == uid)
+                ).count()
+            if match_count(user_id) >= 3 or match_count(target_id) >= 3:
+                return APIResponse(status="success",
+                    data={"action": action_str, "mutual_match": False, "group_id": None},
+                    message="Match limit reached")
+
             # Check not already matched
             a_id, b_id = sorted([str(user_id), str(target_id)])
             already = db.query(MutualMatch).filter(

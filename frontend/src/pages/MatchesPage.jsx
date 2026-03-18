@@ -235,25 +235,24 @@ export default function MatchesPage() {
 
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '24px 16px' }}>
 
-        {/* Progress */}
-        {queue.length > 0 && (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 600 }}>
-                {isRevisit ? '🔄 Revisiting passes' : `${Math.min(currentIndex + 1, queue.length)} of ${queue.length}`}
-              </span>
-              <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 600 }}>
-                {queue.length - currentIndex} left
-              </span>
-            </div>
-            <div style={{ height: 3, background: 'var(--border)', borderRadius: 2 }}>
-              <div style={{ height: '100%', background: 'var(--primary)', borderRadius: 2, width: `${(currentIndex / Math.max(queue.length, 1)) * 100}%`, transition: 'width 0.4s ease' }} />
-            </div>
+        {/* Revisit indicator only */}
+        {isRevisit && (
+          <div style={{ marginBottom: 16, textAlign: 'center' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 600 }}>🔄 Revisiting passes</span>
           </div>
         )}
 
         {/* Card stack */}
-        {!exhausted ? (
+        {mutualMatches.length >= 3 ? (
+          <div style={{ background: 'var(--surface)', borderRadius: 24, padding: 40, textAlign: 'center', border: '1px solid var(--border)', marginBottom: 32 }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+            <h3 style={{ fontWeight: 800, color: 'var(--text)', marginBottom: 8, fontSize: 20 }}>Matches exhausted</h3>
+            <p style={{ color: 'var(--text-2)', fontSize: 14, lineHeight: 1.6 }}>
+              You've reached the limit of 3 active matches.<br />
+              To match with new people, unmatch from an existing group first.
+            </p>
+          </div>
+        ) : !exhausted ? (
           <>
             <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
               {next && (
