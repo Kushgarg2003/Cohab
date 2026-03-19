@@ -25,21 +25,23 @@ function BasicInfoScreen({ onNext }) {
   const [countryCode, setCountryCode] = React.useState(localStorage.getItem('userCountryCode') || '+91')
   const [phone, setPhone] = React.useState(localStorage.getItem('userPhoneRaw') || '')
   const [saving, setSaving] = React.useState(false)
+  const [saveError, setSaveError] = React.useState(null)
 
   const today = new Date()
   const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate()).toISOString().split('T')[0]
   const minDate = new Date(today.getFullYear() - 60, today.getMonth(), today.getDate()).toISOString().split('T')[0]
 
   const phoneValid = phone.length >= 7 && phone.length <= 15
-  const isValid = name.trim() && dob && gender && phoneValid
+  const isValid = name.trim() && gender && phoneValid  // DOB optional
 
   const handleNext = async () => {
     if (!isValid) return
     setSaving(true)
+    setSaveError(null)
     const userId = localStorage.getItem('userId')
     const fullPhone = countryCode + phone
     try {
-      await surveyAPI.saveBasicInfo(userId, { name: name.trim(), date_of_birth: dob, gender, phone: fullPhone })
+      await surveyAPI.saveBasicInfo(userId, { name: name.trim(), date_of_birth: dob || null, gender, phone: fullPhone })
       localStorage.setItem('userName', name.trim())
       localStorage.setItem('userDOB', dob)
       localStorage.setItem('userGender', gender)
@@ -47,6 +49,8 @@ function BasicInfoScreen({ onNext }) {
       localStorage.setItem('userPhoneRaw', phone)
       localStorage.setItem('userPhone', fullPhone)
       onNext()
+    } catch (err) {
+      setSaveError(err?.response?.data?.detail || 'Failed to save. Please check your details and try again.')
     } finally {
       setSaving(false)
     }
@@ -113,8 +117,11 @@ function BasicInfoScreen({ onNext }) {
         </div>
       </div>
 
+      {saveError && (
+        <p style={{ color: 'var(--red)', fontSize: 13, fontWeight: 500, marginTop: 16, textAlign: 'center' }}>{saveError}</p>
+      )}
       <button onClick={handleNext} disabled={!isValid || saving}
-        style={{ ...S.btnPrimary, width: '100%', padding: '14px', fontSize: 16, marginTop: 28, opacity: !isValid || saving ? 0.4 : 1 }}>
+        style={{ ...S.btnPrimary, width: '100%', padding: '14px', fontSize: 16, marginTop: 12, opacity: !isValid || saving ? 0.4 : 1 }}>
         {saving ? 'Saving…' : 'Continue →'}
       </button>
     </div>
