@@ -128,9 +128,14 @@ def compute_match_score(a: SurveyResponse, b: SurveyResponse,
 
     # ── Phase 1: Hard Gates ─────────────────────────────────────────────────
 
-    # Location lists (used in both gates and scoring)
+    # Gate 1: City-level location overlap (extract "City" from "City - Area")
     locs_a = list(a.locations or [])
     locs_b = list(b.locations or [])
+    cities_a = {_city(l) for l in locs_a}
+    cities_b = {_city(l) for l in locs_b}
+    if not cities_a or not cities_b or not (cities_a & cities_b):
+        return {"score": 0, "breakdown": {"disqualified": "no_city_overlap",
+                "hard_constraints": 0, "dealbreakers": 0, "lifestyle": 0}}
 
     # Gate 2: Budget adjacency — supports multi-range (any overlap = pass)
     ranges_a = list(a.budget_ranges or ([a.budget_range.value] if a.budget_range else []))
