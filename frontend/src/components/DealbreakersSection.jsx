@@ -17,7 +17,6 @@ const BADGES = {
     label: 'Smoking',
     question: 'What\'s your smoking preference?',
     options: [
-      { value: 'smoker',       short: 'I smoke',        label: 'I smoke — I prefer a roommate who smokes too' },
       { value: 'non-smoker',   short: 'Non-smoker',     label: 'I prefer a non-smoker roommate' },
       { value: 'outside-only', short: 'Outside only',   label: 'Outside-only smoking is fine with me' },
     ]
