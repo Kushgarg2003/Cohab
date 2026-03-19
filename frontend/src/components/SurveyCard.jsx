@@ -14,7 +14,6 @@ export default function SurveyCard({ questions, onNext, onBack }) {
     }
   }, [])
 
-  useEffect(() => { setSelectedCity(null) }, [step])
 
   const fields = [
     { key: 'budget_ranges', label: questions?.budget_range?.label, options: questions?.budget_range?.options, isSimpleMulti: true },
