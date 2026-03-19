@@ -33,6 +33,7 @@ def list_all_users(db: Session = Depends(get_db), _: None = Depends(verify_admin
             "phone": user.phone,
             "gender": user.gender.value if user.gender else None,
             "survey_completed": user.survey_completed,
+            "is_verified": user.is_verified or False,
             "created_at": user.created_at.isoformat(),
             "survey": {
                 "budget_range": survey.budget_range.value if survey and survey.budget_range else None,
@@ -77,6 +78,25 @@ def flush_match_scores(db: Session = Depends(get_db), _: None = Depends(verify_a
     count = db.query(MatchScore).delete()
     db.commit()
     return APIResponse(status="success", data={"deleted": count}, message=f"Flushed {count} cached match scores")
+
+
+@router.patch("/users/{user_id}/verify", response_model=APIResponse)
+def toggle_verify_user(user_id: str, db: Session = Depends(get_db), _: None = Depends(verify_admin)):
+    """Toggle verified status for a user."""
+    try:
+        user_uuid = UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid user_id")
+    user = db.query(User).filter(User.id == user_uuid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.is_verified = not (user.is_verified or False)
+    db.commit()
+    return APIResponse(
+        status="success",
+        data={"user_id": user_id, "is_verified": user.is_verified},
+        message=f"User {'verified' if user.is_verified else 'unverified'}"
+    )
 
 
 @router.delete("/users/{user_id}", response_model=APIResponse)

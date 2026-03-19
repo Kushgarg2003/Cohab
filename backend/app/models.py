@@ -57,6 +57,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     survey_completed = Column(Boolean, default=False)
+    is_verified = Column(Boolean, default=False)
     name = Column(String(100), nullable=True)
     date_of_birth = Column(Date, nullable=True)
     phone = Column(String(20), nullable=True)

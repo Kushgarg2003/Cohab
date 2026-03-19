@@ -110,6 +110,7 @@ def get_swipe_queue(user_id: UUID, db: Session = Depends(get_db)):
             "user_id": str(other.id),
             "name": other.name,
             "picture": other.picture,
+            "is_verified": other.is_verified or False,
             "score": score,
             "breakdown": match.breakdown if match else {},
             "survey_snapshot": {
@@ -286,6 +287,8 @@ def get_mutual_matches(user_id: UUID, db: Session = Depends(get_db)):
             "match_id": str(m.id),
             "user_id": str(other_id),
             "name": other.name if other else None,
+            "picture": other.picture if other else None,
+            "is_verified": other.is_verified or False if other else False,
             "group_id": str(m.group_id) if m.group_id else None,
             "matched_at": m.matched_at.isoformat()
         })

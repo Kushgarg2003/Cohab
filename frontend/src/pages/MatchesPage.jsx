@@ -48,7 +48,15 @@ function SwipeCard({ person, isTop }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <Avatar userId={person.user_id} name={person.name} picture={person.picture} size={52} />
           <div>
-            <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.3 }}>{person.name || 'Anonymous'}</div>
+            <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.3, display: 'flex', alignItems: 'center', gap: 6 }}>
+              {person.name || 'Anonymous'}
+              {person.is_verified && (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                  <circle cx="12" cy="12" r="12" fill="#3b82f6" />
+                  <path d="M7 12.5l3.5 3.5 6.5-7" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </div>
             <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, background: SCORE_COLOR(score) + '20', color: SCORE_COLOR(score), letterSpacing: 0.3 }}>
               {SCORE_LABEL(score)}
             </span>
@@ -305,7 +313,15 @@ export default function MatchesPage() {
                 <div key={m.user_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Avatar userId={m.user_id} name={m.name} picture={m.picture} size={36} />
-                    <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{m.name || 'Anonymous'}</span>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      {m.name || 'Anonymous'}
+                      {m.is_verified && (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                          <circle cx="12" cy="12" r="12" fill="#3b82f6" />
+                          <path d="M7 12.5l3.5 3.5 6.5-7" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {m.group_id && (

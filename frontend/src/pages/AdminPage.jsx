@@ -14,6 +14,7 @@ export default function AdminPage() {
   const [search, setSearch] = useState('')
   const [profileModal, setProfileModal] = useState(null) // { user, survey }
   const [loadingProfile, setLoadingProfile] = useState(null)
+  const [verifyingId, setVerifyingId] = useState(null)
 
   const login = async (e) => {
     e.preventDefault()
@@ -56,6 +57,18 @@ export default function AdminPage() {
       alert('Failed to flush scores.')
     } finally {
       setFlushing(false)
+    }
+  }
+
+  const handleToggleVerify = async (user) => {
+    setVerifyingId(user.user_id)
+    try {
+      const data = await adminAPI.toggleVerify(user.user_id, secret)
+      setUsers(prev => prev.map(u => u.user_id === user.user_id ? { ...u, is_verified: data.is_verified } : u))
+    } catch {
+      alert('Failed to update verification.')
+    } finally {
+      setVerifyingId(null)
     }
   }
 
@@ -191,6 +204,13 @@ export default function AdminPage() {
                   {/* Actions */}
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        onClick={() => handleToggleVerify(user)}
+                        disabled={verifyingId === user.user_id}
+                        style={{ background: user.is_verified ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.05)', border: `1px solid ${user.is_verified ? 'rgba(59,130,246,0.4)' : '#333'}`, color: user.is_verified ? '#60a5fa' : '#555', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        {verifyingId === user.user_id ? '…' : user.is_verified ? '✓ Verified' : 'Verify'}
+                      </button>
                       <button
                         onClick={() => handleViewProfile(user)}
                         disabled={loadingProfile === user.user_id}

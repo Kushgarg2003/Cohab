@@ -241,6 +241,10 @@ export const adminAPI = {
   flushMatchScores: async (secret) => {
     const response = await api.delete('/api/admin/match-scores', { headers: { 'x-admin-secret': secret } })
     return response.data
+  },
+  toggleVerify: async (userId, secret) => {
+    const response = await api.patch(`/api/admin/users/${userId}/verify`, {}, { headers: { 'x-admin-secret': secret } })
+    return response.data.data
   }
 }
 

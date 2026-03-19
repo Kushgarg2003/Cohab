@@ -24,6 +24,7 @@ def run_migrations():
             END$$;
         """))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS gender usergender"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE"))
         # Indexes for high-frequency queries
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_swipes_swiper ON user_swipes (swiper_id)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_swipes_target ON user_swipes (target_id)"))
