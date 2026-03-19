@@ -60,6 +60,13 @@ GENDER_PREF_COMPAT = {
     ("neutral", "other"):   1.0,
 }
 
+# Values that mean "no strong preference" — treated same as None in scoring
+NEUTRAL_PREF_VALUES = {
+    "gender":  {"neutral"},
+    "pets":    {"love"},          # "I love pets, would be great if they had one" — not a constraint
+    "smoking": {"outside-only"},  # "Outside-only smoking is fine with me" — accepts either
+}
+
 # ========== Helpers ==========
 
 def _city(location: str) -> str:
@@ -76,6 +83,13 @@ def _jaccard(set_a: list, set_b: list) -> float:
     intersection = len(a & b)
     union = len(a | b)
     return intersection / union if union > 0 else 0.0
+
+def _effective_pref(field, value):
+    """Returns None if value is a neutral/open preference, else returns value."""
+    if value is None:
+        return None
+    v = value.value if hasattr(value, 'value') else value
+    return None if v in NEUTRAL_PREF_VALUES.get(field, set()) else value
 
 def _dealbreaker_compat(val_a, val_b, matrix: dict) -> float:
     """
@@ -149,9 +163,11 @@ def compute_match_score(a: SurveyResponse, b: SurveyResponse,
     smoking_c = _dealbreaker_compat(a.smoking, b.smoking, SMOKING_COMPAT)
     dietary_c = _dealbreaker_compat(a.dietary, b.dietary, DIETARY_COMPAT)
 
-    # Gender: check A's preference vs B's actual gender, and B's preference vs A's actual gender
-    pref_a = a.gender.value if a.gender else None
-    pref_b = b.gender.value if b.gender else None
+    # Gender: resolve neutral → None, then check A's pref vs B's actual gender and vice versa
+    eff_gender_a = _effective_pref("gender", a.gender)
+    eff_gender_b = _effective_pref("gender", b.gender)
+    pref_a = eff_gender_a.value if eff_gender_a and hasattr(eff_gender_a, 'value') else eff_gender_a
+    pref_b = eff_gender_b.value if eff_gender_b and hasattr(eff_gender_b, 'value') else eff_gender_b
     def _gender_pref_score(pref, actual):
         if pref is None or actual is None:
             return 1.0  # no info = no conflict
@@ -173,8 +189,26 @@ def compute_match_score(a: SurveyResponse, b: SurveyResponse,
     exact_overlap = any(ra == rb for ra in ranges_a for rb in ranges_b)
     budget_pts = 10 if exact_overlap else 5
 
-    # Dealbreaker quality (20 pts) — partial 0.5 matches reduce score
-    dealbreaker_pts = round((pets_c + smoking_c + dietary_c + gender_c) / 4 * 20, 2)
+    # Dealbreaker quality (20 pts) — dynamic denominator: only count fields where
+    # at least one user expressed a clear (non-neutral) preference
+    eff_pets_a    = _effective_pref("pets",    a.pets)
+    eff_pets_b    = _effective_pref("pets",    b.pets)
+    eff_smoking_a = _effective_pref("smoking", a.smoking)
+    eff_smoking_b = _effective_pref("smoking", b.smoking)
+
+    active_sum, active_count = 0.0, 0
+    for eff_a, eff_b, compat in [
+        (eff_pets_a,    eff_pets_b,    pets_c),
+        (eff_smoking_a, eff_smoking_b, smoking_c),
+        (a.dietary,     b.dietary,     dietary_c),
+    ]:
+        if eff_a is not None or eff_b is not None:
+            active_sum += compat
+            active_count += 1
+    if eff_gender_a is not None or eff_gender_b is not None:
+        active_sum += gender_c
+        active_count += 1
+    dealbreaker_pts = 20.0 if active_count == 0 else round(active_sum / active_count * 20, 2)
 
     # Lifestyle similarity (55 pts)
     social_pts = round(_jaccard(a.social_battery, b.social_battery) * 25, 2)
