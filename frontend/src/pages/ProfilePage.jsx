@@ -74,9 +74,17 @@ export default function ProfilePage() {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 28, gap: 12 }}>
           <Avatar userId={userId} name={userName} picture={userPicture} size={80} />
           <div style={{ textAlign: 'center' }}>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: -0.5 }}>{userName || 'You'}</h2>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: -0.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              {userName || 'You'}
+              {profile?.is_verified && (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                  <circle cx="12" cy="12" r="12" fill="#3b82f6" />
+                  <path d="M7 12.5l3.5 3.5 6.5-7" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </h2>
             <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4, fontWeight: 500 }}>
-              {profile?.survey_completed ? 'Profile complete' : 'Profile incomplete'}
+              {profile?.is_verified ? '✓ Verified profile' : profile?.survey_completed ? 'Profile complete' : 'Profile incomplete'}
             </p>
           </div>
           <button

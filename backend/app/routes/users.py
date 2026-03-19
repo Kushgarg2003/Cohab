@@ -127,6 +127,7 @@ def get_user_profile(user_id: UUID, db: Session = Depends(get_db)):
                 "phone": user.phone,
                 "date_of_birth": user.date_of_birth.isoformat() if user.date_of_birth else None,
                 "survey_completed": False,
+                "is_verified": user.is_verified or False,
                 "survey": None
             },
             message="User has no survey yet"
@@ -141,6 +142,7 @@ def get_user_profile(user_id: UUID, db: Session = Depends(get_db)):
             "phone": user.phone,
             "date_of_birth": user.date_of_birth.isoformat() if user.date_of_birth else None,
             "survey_completed": user.survey_completed,
+            "is_verified": user.is_verified or False,
             "survey": {
                 "survey_id": str(survey.id),
                 "budget_range": survey.budget_range,
