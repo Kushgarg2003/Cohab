@@ -122,6 +122,10 @@ def get_user_profile(user_id: UUID, db: Session = Depends(get_db)):
             status="success",
             data={
                 "user_id": str(user.id),
+                "name": user.name,
+                "gender": user.gender.value if user.gender else None,
+                "phone": user.phone,
+                "date_of_birth": user.date_of_birth.isoformat() if user.date_of_birth else None,
                 "survey_completed": False,
                 "survey": None
             },
@@ -132,6 +136,10 @@ def get_user_profile(user_id: UUID, db: Session = Depends(get_db)):
         status="success",
         data={
             "user_id": str(user.id),
+            "name": user.name,
+            "gender": user.gender.value if user.gender else None,
+            "phone": user.phone,
+            "date_of_birth": user.date_of_birth.isoformat() if user.date_of_birth else None,
             "survey_completed": user.survey_completed,
             "survey": {
                 "survey_id": str(survey.id),

@@ -172,6 +172,22 @@ export default function Dashboard() {
           surveyAPI.getUserProfile(userId).catch(() => null)
         ])
         survey.setAllQuestions(questions)
+        // Restore basic info from backend if not in localStorage (new device / cleared storage)
+        if (profile?.name && !localStorage.getItem('userName')) {
+          localStorage.setItem('userName', profile.name)
+          if (profile.gender) localStorage.setItem('userGender', profile.gender)
+          if (profile.date_of_birth) localStorage.setItem('userDOB', profile.date_of_birth)
+          if (profile.phone) {
+            localStorage.setItem('userPhone', profile.phone)
+            // Parse country code prefix (e.g. "+91" from "+919876543210")
+            const match = profile.phone.match(/^(\+\d{1,4})(\d+)$/)
+            if (match) {
+              localStorage.setItem('userCountryCode', match[1])
+              localStorage.setItem('userPhoneRaw', match[2])
+            }
+          }
+        }
+
         if (profile?.survey) {
           const s = profile.survey
           if (s.budget_ranges?.length || s.budget_range || s.locations?.length) {

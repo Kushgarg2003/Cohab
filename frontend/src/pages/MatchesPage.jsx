@@ -281,19 +281,8 @@ export default function MatchesPage() {
               </div>
             </div>
 
-            {/* Action buttons */}
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20, marginBottom: 16 }}>
-              <button onClick={() => handleSwipe('pass')} disabled={swiping} title="Pass (←)"
-                style={{ width: 60, height: 60, borderRadius: '50%', border: '1.5px solid var(--border-2)', background: 'var(--surface)', color: '#EF4444', fontSize: 22, cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.3)', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                ✕
-              </button>
-              <button onClick={() => handleSwipe('like')} disabled={swiping} title="Like (→)"
-                style={{ width: 72, height: 72, borderRadius: '50%', border: '1.5px solid rgba(232,72,28,0.3)', background: 'var(--primary)', color: 'white', fontSize: 26, cursor: 'pointer', boxShadow: '0 8px 24px rgba(232,72,28,0.4)', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                ♥
-              </button>
-              <div style={{ width: 60, height: 60 }} /> {/* spacer for balance */}
-            </div>
-            <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-3)', marginBottom: 32 }}>← → arrow keys also work</p>
+            {/* Spacer so card isn't hidden behind fixed buttons */}
+            <div style={{ height: 100 }} />
           </>
         ) : (
           <div style={{ background: 'var(--surface)', borderRadius: 24, padding: 48, textAlign: 'center', border: '1px solid var(--border)', marginBottom: 32, animation: 'fadeIn 0.4s ease' }}>
@@ -336,6 +325,20 @@ export default function MatchesPage() {
           </div>
         )}
       </div>
+
+      {/* Fixed swipe buttons — always visible on mobile */}
+      {!exhausted && mutualMatches.length < 3 && (
+        <div style={{ position: 'fixed', bottom: 64, left: 0, right: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20, zIndex: 15, pointerEvents: 'none' }}>
+          <button onClick={() => handleSwipe('pass')} disabled={swiping}
+            style={{ width: 60, height: 60, borderRadius: '50%', border: '1.5px solid var(--border-2)', background: 'var(--surface)', color: '#EF4444', fontSize: 22, cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.5)', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'all' }}>
+            ✕
+          </button>
+          <button onClick={() => handleSwipe('like')} disabled={swiping}
+            style={{ width: 72, height: 72, borderRadius: '50%', border: '1.5px solid rgba(232,72,28,0.3)', background: 'var(--primary)', color: 'white', fontSize: 26, cursor: 'pointer', boxShadow: '0 8px 28px rgba(232,72,28,0.5)', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'all' }}>
+            ♥
+          </button>
+        </div>
+      )}
 
       <BottomNav />
     </div>
