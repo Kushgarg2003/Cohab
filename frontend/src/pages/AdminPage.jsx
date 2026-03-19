@@ -103,6 +103,7 @@ export default function AdminPage() {
   }
 
   return (
+    <>
     <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff', padding: '32px 24px' }}>
       {/* Header */}
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
@@ -280,6 +281,7 @@ export default function AdminPage() {
         </div>
       </div>
     )}
+    </>
   )
 }
 
