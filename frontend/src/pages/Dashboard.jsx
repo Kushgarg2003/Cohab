@@ -135,9 +135,9 @@ export default function Dashboard() {
         survey.setSurveyId(surveyData.survey_id)
 
         // Fetch questions (cached) and profile in parallel
-        const cachedQuestions = localStorage.getItem('surveyQuestions_v2')
+        const cachedQuestions = localStorage.getItem('surveyQuestions_v3')
         const [questions, profile] = await Promise.all([
-          cachedQuestions ? Promise.resolve(JSON.parse(cachedQuestions)) : surveyAPI.getQuestions().then(q => { localStorage.setItem('surveyQuestions_v2', JSON.stringify(q)); return q }),
+          cachedQuestions ? Promise.resolve(JSON.parse(cachedQuestions)) : surveyAPI.getQuestions().then(q => { localStorage.setItem('surveyQuestions_v3', JSON.stringify(q)); return q }),
           surveyAPI.getUserProfile(userId).catch(() => null)
         ])
         survey.setAllQuestions(questions)
