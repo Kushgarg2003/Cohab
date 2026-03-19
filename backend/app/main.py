@@ -14,7 +14,8 @@ def run_migrations():
     with engine.connect() as conn:
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE"))
         conn.execute(text("ALTER TABLE survey_responses ADD COLUMN IF NOT EXISTS budget_ranges JSONB"))
-        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(15)"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20)"))
+        conn.execute(text("ALTER TABLE users ALTER COLUMN phone TYPE VARCHAR(20)"))
         conn.execute(text("""
             DO $$ BEGIN
                 IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'usergender') THEN

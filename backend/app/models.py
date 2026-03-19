@@ -59,7 +59,7 @@ class User(Base):
     survey_completed = Column(Boolean, default=False)
     name = Column(String(100), nullable=True)
     date_of_birth = Column(Date, nullable=True)
-    phone = Column(String(15), nullable=True)
+    phone = Column(String(20), nullable=True)
     gender = Column(SQLEnum(UserGender), nullable=True)
     google_id = Column(String(255), unique=True, nullable=True)
     email = Column(String(255), unique=True, nullable=True)

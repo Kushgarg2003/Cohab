@@ -3,29 +3,49 @@ import { useNavigate } from 'react-router-dom'
 import useSurvey from '../hooks/useSurvey'
 import { surveyAPI } from '../api'
 
+const COUNTRY_CODES = [
+  { code: '+91', flag: '🇮🇳', name: 'India' },
+  { code: '+1',  flag: '🇺🇸', name: 'USA/Canada' },
+  { code: '+44', flag: '🇬🇧', name: 'UK' },
+  { code: '+61', flag: '🇦🇺', name: 'Australia' },
+  { code: '+971',flag: '🇦🇪', name: 'UAE' },
+  { code: '+65', flag: '🇸🇬', name: 'Singapore' },
+  { code: '+60', flag: '🇲🇾', name: 'Malaysia' },
+  { code: '+966',flag: '🇸🇦', name: 'Saudi Arabia' },
+  { code: '+974',flag: '🇶🇦', name: 'Qatar' },
+  { code: '+49', flag: '🇩🇪', name: 'Germany' },
+  { code: '+33', flag: '🇫🇷', name: 'France' },
+  { code: '+81', flag: '🇯🇵', name: 'Japan' },
+]
+
 function BasicInfoScreen({ onNext }) {
   const [name, setName] = React.useState(localStorage.getItem('userName') || '')
   const [dob, setDob] = React.useState(localStorage.getItem('userDOB') || '')
   const [gender, setGender] = React.useState(localStorage.getItem('userGender') || '')
-  const [phone, setPhone] = React.useState(localStorage.getItem('userPhone') || '')
+  const [countryCode, setCountryCode] = React.useState(localStorage.getItem('userCountryCode') || '+91')
+  const [phone, setPhone] = React.useState(localStorage.getItem('userPhoneRaw') || '')
   const [saving, setSaving] = React.useState(false)
 
   const today = new Date()
   const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate()).toISOString().split('T')[0]
   const minDate = new Date(today.getFullYear() - 60, today.getMonth(), today.getDate()).toISOString().split('T')[0]
 
-  const isValid = name.trim() && dob && gender && /^\d{10}$/.test(phone)
+  const phoneValid = phone.length >= 7 && phone.length <= 15
+  const isValid = name.trim() && dob && gender && phoneValid
 
   const handleNext = async () => {
     if (!isValid) return
     setSaving(true)
     const userId = localStorage.getItem('userId')
+    const fullPhone = countryCode + phone
     try {
-      await surveyAPI.saveBasicInfo(userId, { name: name.trim(), date_of_birth: dob, gender, phone })
+      await surveyAPI.saveBasicInfo(userId, { name: name.trim(), date_of_birth: dob, gender, phone: fullPhone })
       localStorage.setItem('userName', name.trim())
       localStorage.setItem('userDOB', dob)
       localStorage.setItem('userGender', gender)
-      localStorage.setItem('userPhone', phone)
+      localStorage.setItem('userCountryCode', countryCode)
+      localStorage.setItem('userPhoneRaw', phone)
+      localStorage.setItem('userPhone', fullPhone)
       onNext()
     } finally {
       setSaving(false)
@@ -50,18 +70,29 @@ function BasicInfoScreen({ onNext }) {
             onBlur={e => e.target.style.borderColor = 'var(--border)'} />
         </div>
 
-        {/* DOB + Phone side by side */}
-        <div style={{ display: 'flex', gap: 12 }}>
-          <div style={{ flex: 1 }}>
-            <label style={labelStyle}>Date of birth</label>
-            <input style={inputStyle} type="date" min={minDate} max={maxDate} value={dob}
-              onChange={e => setDob(e.target.value)}
-              onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-              onBlur={e => e.target.style.borderColor = 'var(--border)'} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <label style={labelStyle}>Phone number</label>
-            <input style={inputStyle} type="tel" placeholder="10-digit number" maxLength={10} value={phone}
+        {/* DOB */}
+        <div>
+          <label style={labelStyle}>Date of birth</label>
+          <input style={inputStyle} type="date" min={minDate} max={maxDate} value={dob}
+            onChange={e => setDob(e.target.value)}
+            onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+            onBlur={e => e.target.style.borderColor = 'var(--border)'} />
+        </div>
+
+        {/* Phone with country code */}
+        <div>
+          <label style={labelStyle}>Phone number</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <select
+              value={countryCode}
+              onChange={e => setCountryCode(e.target.value)}
+              style={{ padding: '13px 10px', borderRadius: 'var(--radius-sm)', border: '2px solid var(--border)', fontSize: 14, fontWeight: 600, color: 'var(--text)', background: 'var(--white)', cursor: 'pointer', outline: 'none', flexShrink: 0 }}
+            >
+              {COUNTRY_CODES.map(c => (
+                <option key={c.code} value={c.code}>{c.flag} {c.code}</option>
+              ))}
+            </select>
+            <input style={{ ...inputStyle, flex: 1 }} type="tel" placeholder="Phone number" maxLength={15} value={phone}
               onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
               onFocus={e => e.target.style.borderColor = 'var(--primary)'}
               onBlur={e => e.target.style.borderColor = 'var(--border)'} />
