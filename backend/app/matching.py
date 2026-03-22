@@ -183,8 +183,20 @@ def compute_match_score(a: SurveyResponse, b: SurveyResponse,
     # ── Phase 2: Scoring ────────────────────────────────────────────────────
 
     # Location area depth (10 pts) — bonus for matching exact areas, not just city
+    # "City - Others" counts as overlapping with any area in the same city on the other side
     set_a, set_b = set(locs_a), set(locs_b)
-    area_jaccard = _jaccard(list(set_a), list(set_b))
+    def _expand_others(src, other):
+        expanded = set(src)
+        for loc in src:
+            if loc.endswith(' - Others'):
+                city = loc.rsplit(' - ', 1)[0]
+                for o in other:
+                    if _city(o) == city:
+                        expanded.add(o)
+        return expanded
+    exp_a = _expand_others(set_a, set_b)
+    exp_b = _expand_others(set_b, set_a)
+    area_jaccard = _jaccard(list(exp_a), list(exp_b))
     location_pts = round(area_jaccard * 10, 2)
 
     # Budget quality (10 pts) — exact overlap scores more than adjacent only

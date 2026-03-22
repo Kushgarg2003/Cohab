@@ -167,6 +167,16 @@ export default function SurveyCard({ questions, onNext, onBack }) {
                       </button>
                     )
                   })}
+                  {(() => {
+                    const othersKey = `${selectedCity} - Others`
+                    const selected = mandatoryData.locations.includes(othersKey)
+                    return (
+                      <button onClick={() => handleSelect(othersKey)}
+                        style={{ ...S.chip, ...(selected ? S.chipSelected : {}) }}>
+                        {selected && <span style={{ marginRight: 4 }}>✓</span>}Others
+                      </button>
+                    )
+                  })()}
                 </div>
               </>
             )
