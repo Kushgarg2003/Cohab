@@ -27,9 +27,11 @@ class PetPreference(str, enum.Enum):
     NO = "no"
 
 class SmokingPreference(str, enum.Enum):
-    SMOKER = "smoker"
+    SMOKER = "smoker"                              # legacy
     NON_SMOKER = "non-smoker"
-    OUTSIDE_ONLY = "outside-only"
+    OUTSIDE_ONLY = "outside-only"                  # legacy (treated as indifferent)
+    SMOKER_PREFER_SMOKER = "smoker-prefer-smoker"
+    INDIFFERENT = "indifferent"
 
 class DietaryPreference(str, enum.Enum):
     VEG = "veg"
@@ -306,6 +308,23 @@ class WishlistItem(Base):
 
     group = relationship("Group", back_populates="wishlist_items")
     votes = relationship("WishlistVote", back_populates="item", cascade="all, delete-orphan")
+
+
+class GroupInvitation(Base):
+    """Invitation from a match to join a group."""
+    __tablename__ = "group_invitations"
+    __table_args__ = (UniqueConstraint("group_id", "invitee_id", name="uq_group_invitee"),)
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    group_id = Column(UUID(as_uuid=True), ForeignKey("groups.id"), nullable=False)
+    inviter_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    invitee_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    status = Column(String(20), nullable=False, default="pending")  # pending | accepted | rejected
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    inviter = relationship("User", foreign_keys=[inviter_id])
+    invitee = relationship("User", foreign_keys=[invitee_id])
+    group = relationship("Group")
 
 
 class WishlistVote(Base):

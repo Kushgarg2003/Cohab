@@ -32,12 +32,24 @@ PETS_COMPAT = {
 }
 
 SMOKING_COMPAT = {
-    ("smoker",       "smoker"):        1.0,
-    ("smoker",       "non-smoker"):    0.0,   # hard conflict
-    ("smoker",       "outside-only"):  0.5,
-    ("non-smoker",   "non-smoker"):    1.0,
-    ("non-smoker",   "outside-only"):  0.5,
-    ("outside-only", "outside-only"):  1.0,
+    # New values
+    ("smoker-prefer-smoker", "smoker-prefer-smoker"): 1.0,
+    ("smoker-prefer-smoker", "non-smoker"):           0.0,   # hard conflict
+    ("smoker-prefer-smoker", "indifferent"):          1.0,
+    ("non-smoker",           "non-smoker"):           1.0,
+    ("non-smoker",           "indifferent"):          1.0,
+    ("indifferent",          "indifferent"):          1.0,
+    # Legacy backward-compat values
+    ("smoker",       "smoker"):                       1.0,
+    ("smoker",       "non-smoker"):                   0.0,
+    ("smoker",       "outside-only"):                 1.0,
+    ("smoker",       "smoker-prefer-smoker"):         1.0,
+    ("smoker",       "indifferent"):                  1.0,
+    ("non-smoker",   "outside-only"):                 1.0,
+    ("outside-only", "outside-only"):                 1.0,
+    ("outside-only", "smoker-prefer-smoker"):         1.0,
+    ("outside-only", "indifferent"):                  1.0,
+    ("smoker-prefer-smoker", "outside-only"):         1.0,
 }
 
 DIETARY_COMPAT = {
@@ -63,8 +75,8 @@ GENDER_PREF_COMPAT = {
 # Values that mean "no strong preference" — treated same as None in scoring
 NEUTRAL_PREF_VALUES = {
     "gender":  {"neutral"},
-    "pets":    {"love"},          # "I love pets, would be great if they had one" — not a constraint
-    "smoking": {"outside-only"},  # "Outside-only smoking is fine with me" — accepts either
+    "pets":    {"love"},                        # "I love pets" — aspirational, not a constraint
+    "smoking": {"outside-only", "indifferent"}, # both legacy + new neutral values
 }
 
 # ========== Helpers ==========
@@ -146,17 +158,7 @@ def compute_match_score(a: SurveyResponse, b: SurveyResponse,
             return {"score": 0, "breakdown": {"disqualified": "budget_mismatch",
                     "hard_constraints": 0, "dealbreakers": 0, "lifestyle": 0}}
 
-    # Gate 3: Move-in timeline adjacency
-    timeline_a = a.move_in_timeline.value if a.move_in_timeline else None
-    timeline_b = b.move_in_timeline.value if b.move_in_timeline else None
-    if timeline_a and timeline_b and timeline_b not in TIMELINE_ADJACENCY.get(timeline_a, set()):
-        return {"score": 0, "breakdown": {"disqualified": "timeline_mismatch",
-                "hard_constraints": 0, "dealbreakers": 0, "lifestyle": 0}}
-
-    # Gate 4: Occupancy type must match exactly
-    if a.occupancy_type and b.occupancy_type and a.occupancy_type != b.occupancy_type:
-        return {"score": 0, "breakdown": {"disqualified": "occupancy_mismatch",
-                "hard_constraints": 0, "dealbreakers": 0, "lifestyle": 0}}
+    # (Timeline and occupancy are now soft-scored, not hard gates)
 
     # Gate 5: Dealbreaker hard conflicts (0.0 = instant disqualify)
     pets_c    = _dealbreaker_compat(a.pets,    b.pets,    PETS_COMPAT)
@@ -180,14 +182,34 @@ def compute_match_score(a: SurveyResponse, b: SurveyResponse,
 
     # ── Phase 2: Scoring ────────────────────────────────────────────────────
 
-    # Location area depth (15 pts) — bonus for matching exact areas, not just city
+    # Location area depth (10 pts) — bonus for matching exact areas, not just city
     set_a, set_b = set(locs_a), set(locs_b)
     area_jaccard = _jaccard(list(set_a), list(set_b))
-    location_pts = round(area_jaccard * 15, 2)
+    location_pts = round(area_jaccard * 10, 2)
 
     # Budget quality (10 pts) — exact overlap scores more than adjacent only
     exact_overlap = any(ra == rb for ra in ranges_a for rb in ranges_b)
     budget_pts = 10 if exact_overlap else 5
+
+    # Move-in timeline soft score (5 pts)
+    timeline_a = a.move_in_timeline.value if a.move_in_timeline else None
+    timeline_b = b.move_in_timeline.value if b.move_in_timeline else None
+    if not timeline_a or not timeline_b:
+        timeline_pts = 3.0  # one not set = neutral, partial score
+    elif timeline_a == timeline_b:
+        timeline_pts = 5.0
+    elif timeline_b in TIMELINE_ADJACENCY.get(timeline_a, set()):
+        timeline_pts = 3.0  # adjacent (e.g. ASAP vs 1-month)
+    else:
+        timeline_pts = 0.0  # far apart (e.g. ASAP vs 2-3-months)
+
+    # Occupancy type soft score (5 pts)
+    if not a.occupancy_type or not b.occupancy_type:
+        occupancy_pts = 3.0  # one not set = neutral, partial score
+    elif a.occupancy_type == b.occupancy_type:
+        occupancy_pts = 5.0
+    else:
+        occupancy_pts = 0.0  # different preference (private vs twin-sharing)
 
     # Dealbreaker quality (20 pts) — dynamic denominator: only count fields where
     # at least one user expressed a clear (non-neutral) preference
@@ -210,18 +232,19 @@ def compute_match_score(a: SurveyResponse, b: SurveyResponse,
         active_count += 1
     dealbreaker_pts = 20.0 if active_count == 0 else round(active_sum / active_count * 20, 2)
 
-    # Lifestyle similarity (55 pts)
-    social_pts = round(_jaccard(a.social_battery, b.social_battery) * 25, 2)
+    # Lifestyle similarity (50 pts)
+    social_pts = round(_jaccard(a.social_battery, b.social_battery) * 20, 2)
     habits_pts = round(_jaccard(a.habits,         b.habits)         * 20, 2)
     work_pts   = round(_jaccard(a.work_study,     b.work_study)     * 10, 2)
     lifestyle_pts = round(social_pts + habits_pts + work_pts, 2)
 
-    total = round(min(location_pts + budget_pts + dealbreaker_pts + lifestyle_pts, 100), 2)
+    # Total: location(10) + budget(10) + timeline(5) + occupancy(5) + dealbreakers(20) + lifestyle(50) = 100
+    total = round(min(location_pts + budget_pts + timeline_pts + occupancy_pts + dealbreaker_pts + lifestyle_pts, 100), 2)
 
     return {
         "score": total,
         "breakdown": {
-            "hard_constraints": round(location_pts + budget_pts, 2),
+            "hard_constraints": round(location_pts + budget_pts + timeline_pts + occupancy_pts, 2),
             "dealbreakers":     dealbreaker_pts,
             "lifestyle":        lifestyle_pts,
         }

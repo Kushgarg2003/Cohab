@@ -50,7 +50,10 @@ export default function SurveyCard({ questions, onNext, onBack }) {
   }
 
   const isAnswered = () => {
-    if (currentField.isMulti) return selectedCity !== null && mandatoryData.locations.length > 0
+    if (currentField.isMulti) {
+      if (selectedCity === 'Others') return true  // Others bypasses area selection
+      return selectedCity !== null && mandatoryData.locations.length > 0
+    }
     if (currentField.isSimpleMulti) return (mandatoryData.budget_ranges || []).length > 0
     return mandatoryData[currentField.key] !== null
   }
@@ -107,6 +110,31 @@ export default function SurveyCard({ questions, onNext, onBack }) {
                         <span style={{ color: 'var(--text-3)', fontSize: 13 }}>→</span>
                       </button>
                     ))}
+                    <button onClick={() => {
+                      setSelectedCity('Others')
+                      setMandatoryData({ locations: ['Others'] })
+                    }} style={S.option}>
+                      <span>Others</span>
+                      <span style={{ color: 'var(--text-3)', fontSize: 13 }}>→</span>
+                    </button>
+                  </div>
+                </>
+              )
+            }
+
+            // Step A.5: Others selected — no area needed
+            if (selectedCity === 'Others') {
+              return (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <button onClick={() => { setSelectedCity(null); setMandatoryData({ locations: [] }) }}
+                      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 12px', fontSize: 12, fontWeight: 700, color: 'var(--text-3)', cursor: 'pointer' }}>
+                      ← Back
+                    </button>
+                  </div>
+                  <div style={{ background: 'var(--primary-light)', border: '1.5px solid var(--primary)', borderRadius: 12, padding: '16px 18px' }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary)', marginBottom: 4 }}>✓ Others selected</p>
+                    <p style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 500 }}>You can proceed — your city isn't listed above.</p>
                   </div>
                 </>
               )

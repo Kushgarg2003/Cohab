@@ -5,6 +5,63 @@ import Avatar from '../components/Avatar'
 import BottomNav from '../components/BottomNav'
 import { useNotifications } from '../hooks/useNotifications'
 
+function BellIcon({ count, onClick }) {
+  return (
+    <button onClick={onClick} style={{ position: 'relative', background: 'var(--surface-2)', border: '1px solid var(--border-2)', borderRadius: 10, width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      {count > 0 && (
+        <span style={{ position: 'absolute', top: -4, right: -4, background: 'var(--primary)', color: 'white', fontSize: 10, fontWeight: 800, width: 16, height: 16, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {count > 9 ? '9+' : count}
+        </span>
+      )}
+    </button>
+  )
+}
+
+function InviteDropdown({ match, myGroups, onInvite }) {
+  const [open, setOpen] = useState(false)
+  const [sending, setSending] = useState(null)
+  const [sent, setSent] = useState({})
+
+  const handleInvite = async (groupId) => {
+    setSending(groupId)
+    try {
+      await onInvite(groupId, match.user_id)
+      setSent(prev => ({ ...prev, [groupId]: true }))
+    } catch (e) {
+      // ignore
+    } finally {
+      setSending(null)
+    }
+  }
+
+  if (!myGroups.length) return null
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button onClick={() => setOpen(!open)}
+        style={{ background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border-2)', padding: '6px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+        + Invite
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', right: 0, bottom: 36, background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 12, padding: 8, minWidth: 180, zIndex: 20, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', padding: '4px 8px 8px', textTransform: 'uppercase', letterSpacing: 1 }}>Invite to group</p>
+          {myGroups.map(g => (
+            <button key={g.group_id} onClick={() => handleInvite(g.group_id)} disabled={!!sent[g.group_id] || sending === g.group_id}
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 8, border: 'none', background: sent[g.group_id] ? 'var(--green-light)' : 'none', color: sent[g.group_id] ? 'var(--green)' : 'var(--text)', fontSize: 13, fontWeight: 600, cursor: sent[g.group_id] ? 'default' : 'pointer' }}>
+              {sent[g.group_id] ? '✓ Sent' : sending === g.group_id ? '…' : g.name}
+            </button>
+          ))}
+          <button onClick={() => setOpen(false)} style={{ display: 'block', width: '100%', padding: '6px 10px', border: 'none', background: 'none', color: 'var(--text-3)', fontSize: 12, cursor: 'pointer', marginTop: 4 }}>Close</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const SCORE_COLOR = (s) => s >= 70 ? '#22C55E' : s >= 45 ? '#F59E0B' : '#EF4444'
 const SCORE_LABEL = (s) => s >= 70 ? 'Great match' : s >= 45 ? 'Decent match' : 'Low match'
 
@@ -152,7 +209,9 @@ export default function MatchesPage() {
   const [matchModal, setMatchModal] = useState(null)
   const [isRevisit, setIsRevisit] = useState(false)
   const [swiping, setSwiping] = useState(false)
-  const [swipeDir, setSwipeDir] = useState(null) // 'like' | 'pass' for animation
+  const [swipeDir, setSwipeDir] = useState(null)
+  const [myGroups, setMyGroups] = useState([])
+  const [unreadCount, setUnreadCount] = useState(0)
   const userId = localStorage.getItem('userId')
   const { notify } = useNotifications()
 
@@ -161,13 +220,21 @@ export default function MatchesPage() {
     Promise.all([
       swipesAPI.getQueue(userId),
       swipesAPI.getMatches(userId),
-    ]).then(([q, m]) => {
+      groupsAPI.getMyGroups(userId).catch(() => ({ groups: [] })),
+      groupsAPI.getNotifications(userId).catch(() => ({ unread_count: 0 })),
+    ]).then(([q, m, g, n]) => {
       setQueue(q.queue || [])
       setIsRevisit(q.is_revisit || false)
       setMutualMatches(m.matches || [])
+      setMyGroups(g.groups || [])
+      setUnreadCount(n.unread_count || 0)
       setLoading(false)
     }).catch(err => { setError(err.message); setLoading(false) })
   }, [userId])
+
+  const handleInvite = async (groupId, inviteeId) => {
+    await groupsAPI.inviteToGroup(groupId, userId, inviteeId)
+  }
 
   const handleUnmatch = async (matchId) => {
     try {
@@ -245,6 +312,7 @@ export default function MatchesPage() {
               🎉 {mutualMatches.length} matched
             </span>
           )}
+          <BellIcon count={unreadCount} onClick={() => navigate('/notifications')} />
           <button
             onClick={() => { localStorage.clear(); navigate('/') }}
             style={{ background: 'var(--surface-2)', border: '1px solid var(--border-2)', color: 'var(--text-3)', fontSize: 12, fontWeight: 600, padding: '6px 12px', borderRadius: 8, cursor: 'pointer' }}
@@ -262,12 +330,12 @@ export default function MatchesPage() {
         )}
 
         {/* Card stack */}
-        {mutualMatches.length >= 3 ? (
+        {mutualMatches.length >= 6 ? (
           <div style={{ background: 'var(--surface)', borderRadius: 24, padding: 40, textAlign: 'center', border: '1px solid var(--border)', marginBottom: 32 }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
             <h3 style={{ fontWeight: 800, color: 'var(--text)', marginBottom: 8, fontSize: 20 }}>Matches exhausted</h3>
             <p style={{ color: 'var(--text-2)', fontSize: 14, lineHeight: 1.6 }}>
-              You've reached the limit of 3 active matches.<br />
+              You've reached the limit of 6 active matches.<br />
               To match with new people, unmatch from an existing group first.
             </p>
           </div>
@@ -323,13 +391,14 @@ export default function MatchesPage() {
                       )}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     {m.group_id && (
                       <button onClick={() => navigate(`/group/${m.group_id}/chat`)}
                         style={{ background: 'var(--primary-light)', color: 'var(--primary)', border: '1px solid rgba(232,72,28,0.2)', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                         💬 Chat
                       </button>
                     )}
+                    <InviteDropdown match={m} myGroups={myGroups} onInvite={handleInvite} />
                     <button onClick={() => handleUnmatch(m.match_id)}
                       style={{ background: 'var(--surface-2)', color: 'var(--text-3)', border: '1px solid var(--border-2)', padding: '6px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                       Unmatch
@@ -343,7 +412,7 @@ export default function MatchesPage() {
       </div>
 
       {/* Fixed swipe buttons — always visible on mobile */}
-      {!exhausted && mutualMatches.length < 3 && (
+      {!exhausted && mutualMatches.length < 6 && (
         <div style={{ position: 'fixed', bottom: 64, left: 0, right: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20, zIndex: 15, pointerEvents: 'none' }}>
           <button onClick={() => handleSwipe('pass')} disabled={swiping}
             style={{ width: 60, height: 60, borderRadius: '50%', border: '1.5px solid var(--border-2)', background: 'var(--surface)', color: '#EF4444', fontSize: 22, cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.5)', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'all' }}>

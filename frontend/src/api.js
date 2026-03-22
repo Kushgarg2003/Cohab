@@ -124,6 +124,22 @@ export const groupsAPI = {
     const response = await api.get('/api/groups/my', { params: { user_id: userId } })
     return response.data.data
   },
+  inviteToGroup: async (groupId, inviterId, inviteeId) => {
+    const response = await api.post(`/api/groups/${groupId}/invite`, null, {
+      params: { inviter_id: inviterId, invitee_id: inviteeId }
+    })
+    return response.data.data
+  },
+  respondToInvitation: async (invId, userId, action) => {
+    const response = await api.post(`/api/groups/invitations/${invId}/respond`, null, {
+      params: { user_id: userId, action }
+    })
+    return response.data.data
+  },
+  getNotifications: async (userId) => {
+    const response = await api.get(`/api/groups/notifications/${userId}`)
+    return response.data.data
+  },
   getGroup: async (groupId) => {
     const response = await api.get(`/api/groups/${groupId}`)
     return response.data.data

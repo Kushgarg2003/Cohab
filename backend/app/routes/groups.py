@@ -7,7 +7,8 @@ from datetime import datetime
 from app.database import get_db
 from app.models import (
     User, Group, GroupMember, GroupRole, GroupStatus,
-    WishlistItem, WishlistVote, WishlistStatus, VoteChoice, SurveyResponse
+    WishlistItem, WishlistVote, WishlistStatus, VoteChoice, SurveyResponse,
+    GroupInvitation, MutualMatch
 )
 from app.schemas import APIResponse
 
@@ -127,6 +128,128 @@ def get_group(group_id: UUID, db: Session = Depends(get_db)):
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     return APIResponse(status="success", data=_group_detail(group, db), message="Group retrieved")
+
+
+# ========== Group Invitations ==========
+
+@router.post("/{group_id}/invite", response_model=APIResponse)
+def invite_to_group(group_id: UUID, inviter_id: UUID, invitee_id: UUID, db: Session = Depends(get_db)):
+    """Invite a mutual match to join a group."""
+    # Must be a member of the group
+    member = db.query(GroupMember).filter(
+        GroupMember.group_id == group_id, GroupMember.user_id == inviter_id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="You must be in the group to invite others")
+
+    # Must be a mutual match
+    from uuid import UUID as _UUID
+    a_id, b_id = sorted([str(inviter_id), str(invitee_id)])
+    is_match = db.query(MutualMatch).filter(
+        MutualMatch.user_a_id == _UUID(a_id), MutualMatch.user_b_id == _UUID(b_id)
+    ).first()
+    if not is_match:
+        raise HTTPException(status_code=403, detail="You can only invite mutual matches")
+
+    # Upsert invitation (allow re-invite if previously rejected)
+    existing = db.query(GroupInvitation).filter(
+        GroupInvitation.group_id == group_id, GroupInvitation.invitee_id == invitee_id
+    ).first()
+    if existing:
+        if existing.status == "pending":
+            return APIResponse(status="success", data={"invitation_id": str(existing.id)}, message="Invitation already sent")
+        existing.status = "pending"
+        existing.inviter_id = inviter_id
+        existing.created_at = datetime.utcnow()
+    else:
+        inv = GroupInvitation(group_id=group_id, inviter_id=inviter_id, invitee_id=invitee_id)
+        db.add(inv)
+    db.commit()
+    return APIResponse(status="success", data={}, message="Invitation sent")
+
+
+@router.post("/invitations/{inv_id}/respond", response_model=APIResponse)
+def respond_to_invitation(inv_id: UUID, user_id: UUID, action: str, db: Session = Depends(get_db)):
+    """Accept or reject a group invitation. action = 'accept' | 'reject'"""
+    if action not in ("accept", "reject"):
+        raise HTTPException(status_code=422, detail="action must be 'accept' or 'reject'")
+
+    inv = db.query(GroupInvitation).filter(
+        GroupInvitation.id == inv_id, GroupInvitation.invitee_id == user_id
+    ).first()
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invitation not found")
+
+    inv.status = "accepted" if action == "accept" else "rejected"
+
+    if action == "accept":
+        # Join the group if not already a member
+        already = db.query(GroupMember).filter(
+            GroupMember.group_id == inv.group_id, GroupMember.user_id == user_id
+        ).first()
+        if not already:
+            db.add(GroupMember(group_id=inv.group_id, user_id=user_id, role=GroupRole.MEMBER))
+
+    db.commit()
+    group_id = str(inv.group_id) if action == "accept" else None
+    return APIResponse(status="success", data={"group_id": group_id}, message=f"Invitation {inv.status}")
+
+
+# ========== Notifications ==========
+
+@router.get("/notifications/{user_id}", response_model=APIResponse)
+def get_notifications(user_id: UUID, db: Session = Depends(get_db)):
+    """
+    Returns pending group invitations + recent mutual matches for the user.
+    """
+    # Pending invitations
+    invitations = db.query(GroupInvitation).filter(
+        GroupInvitation.invitee_id == user_id,
+        GroupInvitation.status == "pending"
+    ).order_by(GroupInvitation.created_at.desc()).all()
+
+    inv_list = []
+    for inv in invitations:
+        inviter = db.query(User).filter(User.id == inv.inviter_id).first()
+        group = db.query(Group).filter(Group.id == inv.group_id).first()
+        inv_list.append({
+            "id": str(inv.id),
+            "type": "group_invite",
+            "group_id": str(inv.group_id),
+            "group_name": group.name if group else "Unknown group",
+            "inviter_name": inviter.name if inviter else "Someone",
+            "inviter_picture": inviter.picture if inviter else None,
+            "created_at": inv.created_at.isoformat(),
+        })
+
+    # Recent mutual matches (last 30 days)
+    from datetime import timedelta
+    cutoff = datetime.utcnow() - timedelta(days=30)
+    matches = db.query(MutualMatch).filter(
+        (MutualMatch.user_a_id == user_id) | (MutualMatch.user_b_id == user_id),
+        MutualMatch.matched_at >= cutoff
+    ).order_by(MutualMatch.matched_at.desc()).all()
+
+    match_list = []
+    for m in matches:
+        other_id = m.user_b_id if m.user_a_id == user_id else m.user_a_id
+        other = db.query(User).filter(User.id == other_id).first()
+        match_list.append({
+            "id": str(m.id),
+            "type": "new_match",
+            "user_id": str(other_id),
+            "name": other.name if other else "Anonymous",
+            "picture": other.picture if other else None,
+            "group_id": str(m.group_id) if m.group_id else None,
+            "matched_at": m.matched_at.isoformat(),
+        })
+
+    total_unread = len(inv_list)  # invitations are the actionable unread items
+    return APIResponse(
+        status="success",
+        data={"invitations": inv_list, "matches": match_list, "unread_count": total_unread},
+        message=f"{total_unread} unread notifications"
+    )
 
 
 # ========== Wishlist ==========

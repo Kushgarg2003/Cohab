@@ -185,7 +185,7 @@ def record_swipe(user_id: UUID, payload: dict, db: Session = Depends(get_db)):
                 return db.query(MutualMatch).filter(
                     (MutualMatch.user_a_id == uid) | (MutualMatch.user_b_id == uid)
                 ).count()
-            if match_count(user_id) >= 3 or match_count(target_id) >= 3:
+            if match_count(user_id) >= 6 or match_count(target_id) >= 6:
                 return APIResponse(status="success",
                     data={"action": action_str, "mutual_match": False, "group_id": None},
                     message="Match limit reached")

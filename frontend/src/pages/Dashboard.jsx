@@ -132,8 +132,8 @@ import LifestyleSwiperCard from '../components/LifestyleSwiperCard'
 import DealbreakersSection from '../components/DealbreakersSection'
 import SurveyPreview from '../components/SurveyPreview'
 
-const STEPS = ['name', 'mandatory', 'lifestyle', 'dealbreakers', 'preview']
-const STEP_LABELS = ['Name', 'Basics', 'Lifestyle', 'Dealbreakers', 'Review']
+const STEPS = ['name', 'mandatory', 'dealbreakers', 'lifestyle', 'preview']
+const STEP_LABELS = ['Name', 'Basics', 'Dealbreakers', 'Lifestyle', 'Review']
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -242,15 +242,15 @@ export default function Dashboard() {
   }, [survey.mandatoryData, survey.lifestyleTags, survey.dealbreakers, survey.deepDiveResponses])
 
   const handleMandatoryNext = async () => {
-    try { await surveyAPI.saveMandatory(survey.surveyId, survey.mandatoryData); survey.setCurrentStep('lifestyle') }
-    catch { setError('Failed to save. Please try again.') }
-  }
-  const handleLifestyleNext = async () => {
-    try { await surveyAPI.saveLifestyle(survey.surveyId, survey.lifestyleTags); survey.setCurrentStep('dealbreakers') }
+    try { await surveyAPI.saveMandatory(survey.surveyId, survey.mandatoryData); survey.setCurrentStep('dealbreakers') }
     catch { setError('Failed to save. Please try again.') }
   }
   const handleDealbreakerNext = async () => {
-    try { await surveyAPI.saveDealbreakers(survey.surveyId, survey.dealbreakers); survey.setCurrentStep('preview') }
+    try { await surveyAPI.saveDealbreakers(survey.surveyId, survey.dealbreakers); survey.setCurrentStep('lifestyle') }
+    catch { setError('Failed to save. Please try again.') }
+  }
+  const handleLifestyleNext = async () => {
+    try { await surveyAPI.saveLifestyle(survey.surveyId, survey.lifestyleTags); survey.setCurrentStep('preview') }
     catch { setError('Failed to save. Please try again.') }
   }
   const handleSubmit = async () => {
@@ -296,9 +296,11 @@ export default function Dashboard() {
 
       {/* Top bar */}
       <div style={{ borderBottom: '1px solid var(--border)', background: 'var(--white)', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
-        <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.3 }}>
-          Coloc<span style={{ color: 'var(--primary)' }}>sy</span>
-        </span>
+        <button onClick={() => navigate('/matches')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+          <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.3 }}>
+            Coloc<span style={{ color: 'var(--primary)' }}>sy</span>
+          </span>
+        </button>
         <div style={{ display: 'flex', gap: 6 }}>
           {STEPS.map((s, i) => (
             <div key={s} style={{
@@ -330,14 +332,14 @@ export default function Dashboard() {
         {survey.currentStep === 'mandatory' && (
           <SurveyCard questions={survey.allQuestions?.mandatory || {}} onNext={handleMandatoryNext} onBack={() => navigate('/')} />
         )}
-        {survey.currentStep === 'lifestyle' && (
-          <LifestyleSwiperCard lifestyleTagsData={survey.allQuestions?.lifestyle_tags || {}} onNext={handleLifestyleNext} onBack={() => survey.setCurrentStep('mandatory')} />
-        )}
         {survey.currentStep === 'dealbreakers' && (
-          <DealbreakersSection onNext={handleDealbreakerNext} onBack={() => survey.setCurrentStep('lifestyle')} />
+          <DealbreakersSection onNext={handleDealbreakerNext} onBack={() => survey.setCurrentStep('mandatory')} />
+        )}
+        {survey.currentStep === 'lifestyle' && (
+          <LifestyleSwiperCard lifestyleTagsData={survey.allQuestions?.lifestyle_tags || {}} onNext={handleLifestyleNext} onBack={() => survey.setCurrentStep('dealbreakers')} />
         )}
         {survey.currentStep === 'preview' && (
-          <SurveyPreview onSubmit={handleSubmit} onBack={() => survey.setCurrentStep('dealbreakers')} />
+          <SurveyPreview onSubmit={handleSubmit} onBack={() => survey.setCurrentStep('lifestyle')} />
         )}
       </div>
 

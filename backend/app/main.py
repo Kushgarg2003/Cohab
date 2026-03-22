@@ -25,6 +25,21 @@ def run_migrations():
         """))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS gender usergender"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE"))
+        # New smoking preference enum values
+        conn.execute(text("ALTER TYPE smokingpreference ADD VALUE IF NOT EXISTS 'smoker-prefer-smoker'"))
+        conn.execute(text("ALTER TYPE smokingpreference ADD VALUE IF NOT EXISTS 'indifferent'"))
+        # Group invitations table
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS group_invitations (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+                inviter_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                invitee_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE (group_id, invitee_id)
+            )
+        """))
         # Indexes for high-frequency queries
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_swipes_swiper ON user_swipes (swiper_id)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_swipes_target ON user_swipes (target_id)"))
