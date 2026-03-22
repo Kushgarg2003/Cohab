@@ -8,59 +8,64 @@ from app.models import LifestyleTag, LifestyleCategory
 # Initialize database tables
 Base.metadata.create_all(bind=engine)
 
-# Add new columns to existing tables if they don't exist yet
-def run_migrations():
+# Run each migration statement independently so one failure never crashes startup
+def _run(sql: str, autocommit: bool = False):
     from sqlalchemy import text
-    with engine.connect() as conn:
-        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE"))
-        conn.execute(text("ALTER TABLE survey_responses ADD COLUMN IF NOT EXISTS budget_ranges JSONB"))
-        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20)"))
-        conn.execute(text("ALTER TABLE users ALTER COLUMN phone TYPE VARCHAR(20)"))
-        conn.execute(text("""
-            DO $$ BEGIN
-                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'usergender') THEN
-                    CREATE TYPE usergender AS ENUM ('male', 'female', 'other');
-                END IF;
-            END$$;
-        """))
-        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS gender usergender"))
-        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE"))
-        # Convert smoking from PG enum to plain varchar (avoids ALTER TYPE ADD VALUE issues)
-        conn.execute(text("""
-            DO $$ BEGIN
-                IF EXISTS (
-                    SELECT 1 FROM information_schema.columns
-                    WHERE table_name='survey_responses' AND column_name='smoking'
-                    AND udt_name='smokingpreference'
-                ) THEN
-                    ALTER TABLE survey_responses
-                        ALTER COLUMN smoking TYPE VARCHAR(50) USING smoking::VARCHAR(50);
-                END IF;
-            END$$;
-        """))
-        # Multi-select timeline and occupancy
-        conn.execute(text("ALTER TABLE survey_responses ADD COLUMN IF NOT EXISTS move_in_timelines JSONB"))
-        conn.execute(text("ALTER TABLE survey_responses ADD COLUMN IF NOT EXISTS occupancy_types JSONB"))
-        # Group invitations table
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS group_invitations (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
-                inviter_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                invitee_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                status VARCHAR(20) NOT NULL DEFAULT 'pending',
-                created_at TIMESTAMP DEFAULT NOW(),
-                UNIQUE (group_id, invitee_id)
-            )
-        """))
-        # Indexes for high-frequency queries
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_swipes_swiper ON user_swipes (swiper_id)"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_swipes_target ON user_swipes (target_id)"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_mutual_matches_a ON mutual_matches (user_a_id)"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_mutual_matches_b ON mutual_matches (user_b_id)"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_messages_group ON messages (group_id)"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_match_scores_pair ON match_scores (user_a_id, user_b_id)"))
-        conn.commit()
+    try:
+        opts = {"isolation_level": "AUTOCOMMIT"} if autocommit else {}
+        with engine.connect().execution_options(**opts) as conn:
+            conn.execute(text(sql))
+            if not autocommit:
+                conn.commit()
+    except Exception as e:
+        print(f"[migration] skipped (already applied or error): {e}")
+
+def run_migrations():
+    _run("ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE")
+    _run("ALTER TABLE survey_responses ADD COLUMN IF NOT EXISTS budget_ranges JSONB")
+    _run("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20)")
+    _run("ALTER TABLE users ALTER COLUMN phone TYPE VARCHAR(20)")
+    _run("""
+        DO $$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'usergender') THEN
+                CREATE TYPE usergender AS ENUM ('male', 'female', 'other');
+            END IF;
+        END$$;
+    """)
+    _run("ALTER TABLE users ADD COLUMN IF NOT EXISTS gender usergender")
+    _run("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE")
+    # Convert smoking from PG enum → VARCHAR so new values work without ALTER TYPE ADD VALUE
+    _run("""
+        DO $$ BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='survey_responses' AND column_name='smoking'
+                AND udt_name='smokingpreference'
+            ) THEN
+                ALTER TABLE survey_responses
+                    ALTER COLUMN smoking TYPE VARCHAR(50) USING smoking::VARCHAR(50);
+            END IF;
+        END$$;
+    """)
+    _run("ALTER TABLE survey_responses ADD COLUMN IF NOT EXISTS move_in_timelines JSONB")
+    _run("ALTER TABLE survey_responses ADD COLUMN IF NOT EXISTS occupancy_types JSONB")
+    _run("""
+        CREATE TABLE IF NOT EXISTS group_invitations (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+            inviter_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            invitee_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE (group_id, invitee_id)
+        )
+    """)
+    _run("CREATE INDEX IF NOT EXISTS ix_user_swipes_swiper ON user_swipes (swiper_id)")
+    _run("CREATE INDEX IF NOT EXISTS ix_user_swipes_target ON user_swipes (target_id)")
+    _run("CREATE INDEX IF NOT EXISTS ix_mutual_matches_a ON mutual_matches (user_a_id)")
+    _run("CREATE INDEX IF NOT EXISTS ix_mutual_matches_b ON mutual_matches (user_b_id)")
+    _run("CREATE INDEX IF NOT EXISTS ix_messages_group ON messages (group_id)")
+    _run("CREATE INDEX IF NOT EXISTS ix_match_scores_pair ON match_scores (user_a_id, user_b_id)")
 
 run_migrations()
 
