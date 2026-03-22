@@ -5,7 +5,6 @@ export default function SurveyCard({ questions, onNext, onBack }) {
   const { mandatoryData, setMandatoryData } = useSurvey()
   const [step, setStep] = useState(0)
   const [selectedCity, setSelectedCity] = useState(null)
-  const [locationSearch, setLocationSearch] = useState('')
 
   // Derive selected city from existing locations on mount (for edit mode)
   useEffect(() => {
@@ -53,7 +52,7 @@ export default function SurveyCard({ questions, onNext, onBack }) {
   const isAnswered = () => {
     if (currentField.isMulti) {
       if (selectedCity === 'Others') return true  // Others bypasses area selection
-      return mandatoryData.locations.length > 0   // also covers search-selected locations
+      return selectedCity !== null && mandatoryData.locations.length > 0
     }
     if (currentField.isSimpleMulti) return (mandatoryData[currentField.key] || []).length > 0
     return mandatoryData[currentField.key] !== null
@@ -96,74 +95,16 @@ export default function SurveyCard({ questions, onNext, onBack }) {
             // Build city list from options
             const cities = [...new Set(options.map(o => o.includes(' - ') ? o.split(' - ')[0] : o))]
 
-            // Search box — always visible on Step A (city picker)
-            const searchBox = !selectedCity && (
-              <div style={{ position: 'relative', marginBottom: 14 }}>
-                <input
-                  type="text"
-                  placeholder="Search any area or city…"
-                  value={locationSearch}
-                  onChange={e => setLocationSearch(e.target.value)}
-                  style={{ width: '100%', padding: '10px 14px', border: '2px solid var(--border)', borderRadius: 10, fontSize: 14, fontWeight: 500, color: 'var(--text)', background: 'var(--white)', outline: 'none', boxSizing: 'border-box' }}
-                />
-                {locationSearch && (
-                  <button onClick={() => setLocationSearch('')}
-                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 16, cursor: 'pointer', lineHeight: 1 }}>✕</button>
-                )}
-              </div>
-            )
-
-            // Search results view
-            if (!selectedCity && locationSearch.trim()) {
-              const q = locationSearch.trim().toLowerCase()
-              const matches = options.filter(o => o.toLowerCase().includes(q)).slice(0, 10)
-              const customKey = locationSearch.trim()
-              const alreadyExact = options.some(o => o.toLowerCase() === q)
-              return (
-                <>
-                  {searchBox}
-                  {matches.length > 0 ? (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {matches.map(option => {
-                        const selected = mandatoryData.locations.includes(option)
-                        const [city, area] = option.split(' - ')
-                        return (
-                          <button key={option} onClick={() => handleSelect(option)}
-                            style={{ ...S.chip, ...(selected ? S.chipSelected : {}) }}>
-                            {selected && <span style={{ marginRight: 4 }}>✓</span>}
-                            <span style={{ fontWeight: 700 }}>{area || city}</span>
-                            <span style={{ color: selected ? 'var(--primary)' : 'var(--text-3)', marginLeft: 4, fontSize: 11 }}>{area ? city : ''}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  ) : (
-                    <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-3)', fontSize: 13 }}>No matches found</div>
-                  )}
-                  {!alreadyExact && customKey && (
-                    <button onClick={() => {
-                      handleSelect(customKey)
-                      setLocationSearch('')
-                    }} style={{ ...S.option, marginTop: 10, borderStyle: 'dashed', color: 'var(--primary)' }}>
-                      <span>+ Add "{customKey}" as custom location</span>
-                    </button>
-                  )}
-                </>
-              )
-            }
-
             // Step A: Pick a city
             if (!selectedCity) {
               return (
                 <>
-                  {searchBox}
                   <p style={S.hint}>Pick a city — you can choose multiple areas within it.</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {cities.map(city => (
                       <button key={city} onClick={() => {
                         setSelectedCity(city)
-                        setMandatoryData({ locations: [] })
-                        setLocationSearch('')
+                        setMandatoryData({ locations: [] }) // clear if changing city
                       }} style={S.option}>
                         <span>{city}</span>
                         <span style={{ color: 'var(--text-3)', fontSize: 13 }}>→</span>

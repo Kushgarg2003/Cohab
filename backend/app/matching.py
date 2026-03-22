@@ -81,77 +81,9 @@ NEUTRAL_PREF_VALUES = {
 
 # ========== Helpers ==========
 
-# All standard "City - Area" options from the survey.
-# Used to resolve custom free-text locations to a known city.
-_STANDARD_LOCATIONS = [
-    "Bangalore - Koramangala", "Bangalore - Indiranagar", "Bangalore - HSR Layout",
-    "Bangalore - Whitefield", "Bangalore - Electronic City", "Bangalore - Marathahalli",
-    "Bangalore - Bellandur", "Bangalore - Sarjapur Road", "Bangalore - Bannerghatta Road",
-    "Bangalore - JP Nagar", "Bangalore - Jayanagar", "Bangalore - Hebbal",
-    "Bangalore - Yelahanka", "Bangalore - Rajajinagar",
-    "Mumbai - BKC", "Mumbai - Andheri", "Mumbai - Powai", "Mumbai - Thane",
-    "Mumbai - Bandra", "Mumbai - Malad", "Mumbai - Goregaon", "Mumbai - Borivali",
-    "Mumbai - Worli", "Mumbai - Navi Mumbai",
-    "Hyderabad - Gachibowli", "Hyderabad - Hitech City", "Hyderabad - Kondapur",
-    "Hyderabad - Banjara Hills", "Hyderabad - Jubilee Hills", "Hyderabad - Madhapur",
-    "Hyderabad - Miyapur", "Hyderabad - Begumpet",
-    "Delhi - Connaught Place", "Delhi - Lajpat Nagar", "Delhi - Dwarka",
-    "Delhi - Hauz Khas", "Delhi - Saket", "Delhi - Vasant Kunj",
-    "Delhi - Rohini", "Delhi - Nehru Place",
-    "Gurgaon - Cyber City", "Gurgaon - Sohna Road", "Gurgaon - Golf Course Road",
-    "Gurgaon - MG Road", "Gurgaon - DLF Phase 1", "Gurgaon - DLF Phase 2",
-    "Gurgaon - Sector 56",
-    "Noida - Sector 62", "Noida - Sector 18", "Noida - Greater Noida",
-    "Noida - Sector 137", "Noida - Sector 50", "Noida - Expressway",
-    "Pune - Hinjewadi", "Pune - Kothrud", "Pune - Baner",
-    "Pune - Viman Nagar", "Pune - Wakad", "Pune - Aundh",
-    "Pune - Magarpatta", "Pune - Hadapsar", "Pune - Pimpri-Chinchwad",
-    "Chennai - OMR", "Chennai - Anna Nagar", "Chennai - Velachery",
-    "Chennai - T Nagar", "Chennai - Adyar", "Chennai - Porur",
-    "Chennai - Guindy", "Chennai - Sholinganallur",
-    "Kolkata - Salt Lake", "Kolkata - Rajarhat", "Kolkata - New Town",
-    "Kolkata - Park Street", "Kolkata - Ballygunge", "Kolkata - Howrah",
-    "Ahmedabad - SG Highway", "Ahmedabad - Prahlad Nagar",
-    "Ahmedabad - Satellite", "Ahmedabad - Bodakdev",
-    "Indore - Vijay Nagar", "Indore - AB Road", "Indore - Scheme 54",
-    "Jaipur - Vaishali Nagar", "Jaipur - C Scheme", "Jaipur - Malviya Nagar",
-]
-
-# Build area-keyword → city lookup (lowercase area words → city name)
-_AREA_TO_CITY = {}
-for _loc in _STANDARD_LOCATIONS:
-    _c, _a = _loc.split(' - ', 1)
-    # index every word in the area name for flexible keyword matching
-    for _word in _a.lower().split():
-        if len(_word) >= 3:
-            _AREA_TO_CITY.setdefault(_word, _c)
-    _AREA_TO_CITY.setdefault(_a.lower(), _c)   # also index full area name
-    _AREA_TO_CITY.setdefault(_c.lower(), _c)   # city name maps to itself
-
-
 def _city(location: str) -> str:
-    """
-    Extract city from a location string.
-    - Standard format 'City - Area'  → returns 'City'
-    - Custom free-text (no ' - ')    → tries to resolve to a known city
-      via keyword lookup; falls back to the raw string if unrecognised.
-    """
-    if ' - ' in location:
-        return location.split(' - ')[0].strip()
-    raw = location.strip()
-    lower = raw.lower()
-    # Exact full-string match first
-    if lower in _AREA_TO_CITY:
-        return _AREA_TO_CITY[lower]
-    # Word-level match: if any significant word resolves to a city, use it
-    for word in lower.split():
-        if word in _AREA_TO_CITY:
-            return _AREA_TO_CITY[word]
-    # Substring match: check if custom text contains a known area name
-    for area_key, city_name in _AREA_TO_CITY.items():
-        if len(area_key) >= 4 and area_key in lower:
-            return city_name
-    return raw  # truly unknown — treated as its own city (matches others who put same)
+    """Extract city prefix from 'City - Area' format."""
+    return location.split(' - ')[0].strip() if ' - ' in location else location.strip()
 
 def _jaccard(set_a: list, set_b: list) -> float:
     """Jaccard similarity between two tag lists."""
