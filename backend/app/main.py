@@ -11,6 +11,11 @@ Base.metadata.create_all(bind=engine)
 # Add new columns to existing tables if they don't exist yet
 def run_migrations():
     from sqlalchemy import text
+    # ALTER TYPE ADD VALUE must run outside a transaction (AUTOCOMMIT) in PostgreSQL
+    with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+        conn.execute(text("ALTER TYPE smokingpreference ADD VALUE IF NOT EXISTS 'smoker-prefer-smoker'"))
+        conn.execute(text("ALTER TYPE smokingpreference ADD VALUE IF NOT EXISTS 'indifferent'"))
+
     with engine.connect() as conn:
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE"))
         conn.execute(text("ALTER TABLE survey_responses ADD COLUMN IF NOT EXISTS budget_ranges JSONB"))
@@ -25,9 +30,6 @@ def run_migrations():
         """))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS gender usergender"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE"))
-        # New smoking preference enum values
-        conn.execute(text("ALTER TYPE smokingpreference ADD VALUE IF NOT EXISTS 'smoker-prefer-smoker'"))
-        conn.execute(text("ALTER TYPE smokingpreference ADD VALUE IF NOT EXISTS 'indifferent'"))
         # Multi-select timeline and occupancy
         conn.execute(text("ALTER TABLE survey_responses ADD COLUMN IF NOT EXISTS move_in_timelines JSONB"))
         conn.execute(text("ALTER TABLE survey_responses ADD COLUMN IF NOT EXISTS occupancy_types JSONB"))
