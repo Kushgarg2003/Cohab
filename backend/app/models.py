@@ -96,7 +96,7 @@ class SurveyResponse(Base):
 
     # Dealbreaker badges
     pets = Column(SQLEnum(PetPreference), nullable=True)
-    smoking = Column(SQLEnum(SmokingPreference), nullable=True)
+    smoking = Column(String(50), nullable=True)  # stored as plain string, not PG enum
     dietary = Column(SQLEnum(DietaryPreference), nullable=True)
     gender = Column(SQLEnum(GenderPreference), nullable=True)
 
