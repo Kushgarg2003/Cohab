@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import useSurvey from '../hooks/useSurvey'
 import { surveyAPI } from '../api'
 
@@ -172,6 +172,7 @@ function SectionPicker({ onSelect, onDone }) {
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const survey = useSurvey()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -260,7 +261,8 @@ export default function Dashboard() {
         }
 
         const hasBasicInfo = !!(localStorage.getItem('userName') && localStorage.getItem('userDOB') && localStorage.getItem('userGender') && localStorage.getItem('userPhone'))
-        survey.setCurrentStep(hasBasicInfo ? 'mandatory' : 'name')
+        const isEdit = searchParams.get('edit') === 'true'
+        survey.setCurrentStep(isEdit && hasBasicInfo ? 'picker' : hasBasicInfo ? 'mandatory' : 'name')
         setLoading(false)
       } catch (err) {
         setError(err.message || 'Failed to initialize survey')

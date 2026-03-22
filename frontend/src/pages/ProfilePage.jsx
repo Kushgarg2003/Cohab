@@ -88,7 +88,7 @@ export default function ProfilePage() {
             </p>
           </div>
           <button
-            onClick={() => navigate('/survey')}
+            onClick={() => navigate('/survey?edit=true')}
             style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
           >
             Edit profile
