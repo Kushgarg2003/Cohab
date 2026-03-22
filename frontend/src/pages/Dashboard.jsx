@@ -135,12 +135,43 @@ import SurveyPreview from '../components/SurveyPreview'
 const STEPS = ['name', 'mandatory', 'dealbreakers', 'lifestyle', 'preview']
 const STEP_LABELS = ['Name', 'Basics', 'Dealbreakers', 'Lifestyle', 'Review']
 
+function SectionPicker({ onSelect }) {
+  const sections = [
+    { step: 'name',         icon: '👤', label: 'Basic Info',    desc: 'Name, age, gender, phone' },
+    { step: 'mandatory',    icon: '🏠', label: 'Preferences',   desc: 'Budget, location, move-in, room type' },
+    { step: 'dealbreakers', icon: '⚖️', label: 'Dealbreakers',  desc: 'Pets, smoking, diet, gender pref' },
+    { step: 'lifestyle',    icon: '✨', label: 'Lifestyle',      desc: 'Your vibe and habits' },
+  ]
+  return (
+    <div style={{ background: 'var(--white)', borderRadius: 'var(--radius)', padding: '36px 28px', width: '100%', maxWidth: 520, boxShadow: 'var(--shadow-md)' }}>
+      <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 8, letterSpacing: -0.4 }}>Edit your profile</h2>
+      <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 24, fontWeight: 500 }}>Which section would you like to update?</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {sections.map(s => (
+          <button key={s.step} onClick={() => onSelect(s.step)}
+            style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 18px', border: '2px solid var(--border)', borderRadius: 12, background: 'var(--white)', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-light)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--white)' }}>
+            <span style={{ fontSize: 26 }}>{s.icon}</span>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{s.label}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>{s.desc}</div>
+            </div>
+            <span style={{ marginLeft: 'auto', color: 'var(--text-3)', fontSize: 16 }}>→</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const survey = useSurvey()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [submitted, setSubmitted] = useState(false)
+  const [editMode, setEditMode] = useState(false)
 
   useEffect(() => {
     const init = async () => {
@@ -224,8 +255,14 @@ export default function Dashboard() {
           survey.loadFromLocalStorage(userId)
         }
 
-        const hasBasicInfo = !!(localStorage.getItem('userName') && localStorage.getItem('userDOB') && localStorage.getItem('userGender') && localStorage.getItem('userPhone'))
-        survey.setCurrentStep(hasBasicInfo ? 'mandatory' : 'name')
+        // Use backend profile as source of truth — prevents stale localStorage from old user
+        const hasBasicInfo = !!(profile?.name && profile?.date_of_birth && profile?.gender && profile?.phone)
+        if (profile?.survey_completed) {
+          setEditMode(true)
+          survey.setCurrentStep('picker')
+        } else {
+          survey.setCurrentStep(hasBasicInfo ? 'mandatory' : 'name')
+        }
         setLoading(false)
       } catch (err) {
         setError(err.message || 'Failed to initialize survey')
@@ -242,15 +279,15 @@ export default function Dashboard() {
   }, [survey.mandatoryData, survey.lifestyleTags, survey.dealbreakers, survey.deepDiveResponses])
 
   const handleMandatoryNext = async () => {
-    try { await surveyAPI.saveMandatory(survey.surveyId, survey.mandatoryData); survey.setCurrentStep('dealbreakers') }
+    try { await surveyAPI.saveMandatory(survey.surveyId, survey.mandatoryData); survey.setCurrentStep(editMode ? 'picker' : 'dealbreakers') }
     catch { setError('Failed to save. Please try again.') }
   }
   const handleDealbreakerNext = async () => {
-    try { await surveyAPI.saveDealbreakers(survey.surveyId, survey.dealbreakers); survey.setCurrentStep('lifestyle') }
+    try { await surveyAPI.saveDealbreakers(survey.surveyId, survey.dealbreakers); survey.setCurrentStep(editMode ? 'picker' : 'lifestyle') }
     catch { setError('Failed to save. Please try again.') }
   }
   const handleLifestyleNext = async () => {
-    try { await surveyAPI.saveLifestyle(survey.surveyId, survey.lifestyleTags); survey.setCurrentStep('preview') }
+    try { await surveyAPI.saveLifestyle(survey.surveyId, survey.lifestyleTags); survey.setCurrentStep(editMode ? 'picker' : 'preview') }
     catch { setError('Failed to save. Please try again.') }
   }
   const handleSubmit = async () => {
@@ -316,7 +353,7 @@ export default function Dashboard() {
       </div>
 
       {/* Step label */}
-      {stepIndex >= 0 && (
+      {stepIndex >= 0 && survey.currentStep !== 'picker' && (
         <div style={{ textAlign: 'center', padding: '28px 24px 0' }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary)', letterSpacing: 2, textTransform: 'uppercase' }}>
             Step {stepIndex + 1} — {STEP_LABELS[stepIndex]}
@@ -326,17 +363,20 @@ export default function Dashboard() {
 
       {/* Content */}
       <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 16px 0' }}>
+        {survey.currentStep === 'picker' && (
+          <SectionPicker onSelect={(step) => survey.setCurrentStep(step)} />
+        )}
         {survey.currentStep === 'name' && (
-          <BasicInfoScreen onNext={() => survey.setCurrentStep('mandatory')} />
+          <BasicInfoScreen onNext={() => survey.setCurrentStep(editMode ? 'picker' : 'mandatory')} />
         )}
         {survey.currentStep === 'mandatory' && (
-          <SurveyCard questions={survey.allQuestions?.mandatory || {}} onNext={handleMandatoryNext} onBack={() => navigate('/')} />
+          <SurveyCard questions={survey.allQuestions?.mandatory || {}} onNext={handleMandatoryNext} onBack={() => editMode ? survey.setCurrentStep('picker') : navigate('/')} />
         )}
         {survey.currentStep === 'dealbreakers' && (
-          <DealbreakersSection onNext={handleDealbreakerNext} onBack={() => survey.setCurrentStep('mandatory')} />
+          <DealbreakersSection onNext={handleDealbreakerNext} onBack={() => survey.setCurrentStep(editMode ? 'picker' : 'mandatory')} />
         )}
         {survey.currentStep === 'lifestyle' && (
-          <LifestyleSwiperCard lifestyleTagsData={survey.allQuestions?.lifestyle_tags || {}} onNext={handleLifestyleNext} onBack={() => survey.setCurrentStep('dealbreakers')} />
+          <LifestyleSwiperCard lifestyleTagsData={survey.allQuestions?.lifestyle_tags || {}} onNext={handleLifestyleNext} onBack={() => survey.setCurrentStep(editMode ? 'picker' : 'dealbreakers')} />
         )}
         {survey.currentStep === 'preview' && (
           <SurveyPreview onSubmit={handleSubmit} onBack={() => survey.setCurrentStep('lifestyle')} />
@@ -344,7 +384,7 @@ export default function Dashboard() {
       </div>
 
       {/* Bottom progress bar */}
-      {stepIndex >= 0 && (
+      {stepIndex >= 0 && survey.currentStep !== 'picker' && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(12,12,16,0.95)', backdropFilter: 'blur(12px)', borderTop: '1px solid var(--border)', padding: '10px 24px 14px', zIndex: 20 }}>
           <div style={{ maxWidth: 520, margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
