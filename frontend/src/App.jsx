@@ -10,6 +10,7 @@ import KitPage from './pages/KitPage'
 import AdminPage from './pages/AdminPage'
 import ProfilePage from './pages/ProfilePage'
 import NotificationsPage from './pages/NotificationsPage'
+import MyGroupsPage from './pages/MyGroupsPage'
 
 const GOOGLE_CLIENT_ID = '863061899819-p74tbi4qpfi5f4bghlhd946dp96mpnph.apps.googleusercontent.com'
 
@@ -30,6 +31,7 @@ function App() {
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/groups" element={<MyGroupsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
