@@ -5,7 +5,7 @@ from uuid import UUID
 from app.database import get_db, settings
 from app.models import (User, SurveyResponse, MatchScore, MutualMatch,
                         UserSwipe, GroupMember, Group, Message,
-                        KitItem, KitDebt, WishlistItem, WishlistVote)
+                        KitItem, KitDebt, WishlistItem, WishlistVote, GroupInvitation)
 from app.schemas import APIResponse
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -147,13 +147,18 @@ def delete_user(user_id: str, db: Session = Depends(get_db), _: None = Depends(v
         db.query(WishlistVote).filter(WishlistVote.wishlist_item_id.in_(item_ids)).delete(synchronize_session=False)
     db.query(WishlistItem).filter(WishlistItem.added_by == user_uuid).delete(synchronize_session=False)
 
-    # 9. Messages sent by this user
+    # 9. Group invitations (inviter or invitee)
+    db.query(GroupInvitation).filter(
+        or_(GroupInvitation.inviter_id == user_uuid, GroupInvitation.invitee_id == user_uuid)
+    ).delete(synchronize_session=False)
+
+    # 10. Messages sent by this user
     db.query(Message).filter(Message.sender_id == user_uuid).delete(synchronize_session=False)
 
-    # 10. Group memberships
+    # 11. Group memberships
     db.query(GroupMember).filter(GroupMember.user_id == user_uuid).delete(synchronize_session=False)
 
-    # 11. Groups created by this user — transfer or delete
+    # 12. Groups created by this user — transfer or delete
     for group in db.query(Group).filter(Group.created_by == user_uuid).all():
         new_admin = db.query(GroupMember).filter(GroupMember.group_id == group.id).first()
         if new_admin:
@@ -174,7 +179,7 @@ def delete_user(user_id: str, db: Session = Depends(get_db), _: None = Depends(v
 
     db.flush()
 
-    # 12. Finally delete the user (SurveyResponse cascades via ORM)
+    # 13. Finally delete the user (SurveyResponse cascades via ORM)
     db.delete(user)
     db.commit()
 

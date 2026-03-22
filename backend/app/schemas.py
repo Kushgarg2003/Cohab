@@ -31,8 +31,10 @@ class UserResponse(BaseModel):
 class MandatoryDataRequest(BaseModel):
     budget_ranges: List[str] = Field(..., min_items=1)
     locations: List[str] = Field(..., min_items=1)
-    move_in_timeline: MoveInTimeline
-    occupancy_type: OccupancyType
+    move_in_timeline: Optional[MoveInTimeline] = None   # legacy
+    move_in_timelines: List[str] = Field(default_factory=list)
+    occupancy_type: Optional[OccupancyType] = None      # legacy
+    occupancy_types: List[str] = Field(default_factory=list)
 
 class MandatoryDataResponse(BaseModel):
     survey_id: UUID

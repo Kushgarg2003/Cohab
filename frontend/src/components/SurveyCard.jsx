@@ -16,10 +16,10 @@ export default function SurveyCard({ questions, onNext, onBack }) {
 
 
   const fields = [
-    { key: 'budget_ranges', label: questions?.budget_range?.label, options: questions?.budget_range?.options, isSimpleMulti: true },
-    { key: 'locations', label: questions?.locations?.label, options: questions?.locations?.options, isMulti: true },
-    { key: 'move_in_timeline', label: questions?.move_in_timeline?.label, options: questions?.move_in_timeline?.options },
-    { key: 'occupancy_type', label: questions?.occupancy_type?.label, options: questions?.occupancy_type?.options }
+    { key: 'budget_ranges',     label: questions?.budget_range?.label,    options: questions?.budget_range?.options,    isSimpleMulti: true },
+    { key: 'locations',         label: questions?.locations?.label,        options: questions?.locations?.options,        isMulti: true },
+    { key: 'move_in_timelines', label: questions?.move_in_timeline?.label, options: questions?.move_in_timeline?.options, isSimpleMulti: true },
+    { key: 'occupancy_types',   label: questions?.occupancy_type?.label,   options: questions?.occupancy_type?.options,   isSimpleMulti: true },
   ]
 
   const currentField = fields[step]
@@ -31,9 +31,9 @@ export default function SurveyCard({ questions, onNext, onBack }) {
         : [...mandatoryData.locations, value]
       setMandatoryData({ locations })
     } else if (currentField.isSimpleMulti) {
-      const ranges = mandatoryData.budget_ranges || []
-      const updated = ranges.includes(value) ? ranges.filter(r => r !== value) : [...ranges, value]
-      setMandatoryData({ budget_ranges: updated })
+      const current = mandatoryData[currentField.key] || []
+      const updated = current.includes(value) ? current.filter(r => r !== value) : [...current, value]
+      setMandatoryData({ [currentField.key]: updated })
     } else {
       setMandatoryData({ [currentField.key]: mandatoryData[currentField.key] === value ? null : value })
     }
@@ -54,13 +54,13 @@ export default function SurveyCard({ questions, onNext, onBack }) {
       if (selectedCity === 'Others') return true  // Others bypasses area selection
       return selectedCity !== null && mandatoryData.locations.length > 0
     }
-    if (currentField.isSimpleMulti) return (mandatoryData.budget_ranges || []).length > 0
+    if (currentField.isSimpleMulti) return (mandatoryData[currentField.key] || []).length > 0
     return mandatoryData[currentField.key] !== null
   }
 
   const isSelected = (option) => {
     if (currentField.isMulti) return mandatoryData.locations.includes(option)
-    if (currentField.isSimpleMulti) return (mandatoryData.budget_ranges || []).includes(option)
+    if (currentField.isSimpleMulti) return (mandatoryData[currentField.key] || []).includes(option)
     return mandatoryData[currentField.key] === option
   }
 

@@ -28,6 +28,9 @@ def run_migrations():
         # New smoking preference enum values
         conn.execute(text("ALTER TYPE smokingpreference ADD VALUE IF NOT EXISTS 'smoker-prefer-smoker'"))
         conn.execute(text("ALTER TYPE smokingpreference ADD VALUE IF NOT EXISTS 'indifferent'"))
+        # Multi-select timeline and occupancy
+        conn.execute(text("ALTER TABLE survey_responses ADD COLUMN IF NOT EXISTS move_in_timelines JSONB"))
+        conn.execute(text("ALTER TABLE survey_responses ADD COLUMN IF NOT EXISTS occupancy_types JSONB"))
         # Group invitations table
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS group_invitations (

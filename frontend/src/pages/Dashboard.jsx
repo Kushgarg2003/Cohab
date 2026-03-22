@@ -201,8 +201,8 @@ export default function Dashboard() {
             survey.setMandatoryData({
               budget_ranges: s.budget_ranges?.length ? s.budget_ranges : (s.budget_range ? [s.budget_range] : []),
               locations: s.locations || [],
-              move_in_timeline: s.move_in_timeline || null,
-              occupancy_type: s.occupancy_type || null,
+              move_in_timelines: s.move_in_timelines?.length ? s.move_in_timelines : (s.move_in_timeline ? [s.move_in_timeline] : []),
+              occupancy_types: s.occupancy_types?.length ? s.occupancy_types : (s.occupancy_type ? [s.occupancy_type] : []),
             })
           }
           if (s.social_battery?.length || s.habits?.length || s.work_study?.length) {

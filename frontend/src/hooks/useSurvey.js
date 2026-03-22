@@ -10,8 +10,8 @@ const useSurvey = create((set, get) => ({
   mandatoryData: {
     budget_ranges: [],
     locations: [],
-    move_in_timeline: null,
-    occupancy_type: null
+    move_in_timelines: [],
+    occupancy_types: [],
   },
 
   lifestyleTags: {
@@ -83,8 +83,8 @@ const useSurvey = create((set, get) => ({
     mandatoryData: {
       budget_ranges: [],
       locations: [],
-      move_in_timeline: null,
-      occupancy_type: null
+      move_in_timelines: [],
+      occupancy_types: [],
     },
     lifestyleTags: {
       social_battery: [],
@@ -140,8 +140,8 @@ const useSurvey = create((set, get) => ({
     // Check mandatory
     if ((state.mandatoryData.budget_ranges?.length > 0) &&
         state.mandatoryData.locations.length > 0 &&
-        state.mandatoryData.move_in_timeline &&
-        state.mandatoryData.occupancy_type) {
+        state.mandatoryData.move_in_timelines?.length > 0 &&
+        state.mandatoryData.occupancy_types?.length > 0) {
       completed += 1
     }
 

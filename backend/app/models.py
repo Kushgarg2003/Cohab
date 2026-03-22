@@ -84,8 +84,10 @@ class SurveyResponse(Base):
     budget_range = Column(SQLEnum(BudgetRange), nullable=True)  # legacy, kept for compat
     budget_ranges = Column(JSON, nullable=True)  # List of selected budget ranges
     locations = Column(JSON, nullable=True)  # List of location hubs
-    move_in_timeline = Column(SQLEnum(MoveInTimeline), nullable=True)
-    occupancy_type = Column(SQLEnum(OccupancyType), nullable=True)
+    move_in_timeline = Column(SQLEnum(MoveInTimeline), nullable=True)  # legacy single value
+    move_in_timelines = Column(JSON, nullable=True)   # List: ["ASAP", "1-month", ...]
+    occupancy_type = Column(SQLEnum(OccupancyType), nullable=True)  # legacy single value
+    occupancy_types = Column(JSON, nullable=True)     # List: ["private", "twin-sharing"]
 
     # Lifestyle tags (list of tag keys)
     social_battery = Column(JSON, nullable=True, default=list)  # ["extrovert", "ghost"]

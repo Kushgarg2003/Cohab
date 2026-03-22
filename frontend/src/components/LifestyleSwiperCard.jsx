@@ -47,7 +47,7 @@ export default function LifestyleSwiperCard({ lifestyleTagsData, onNext, onBack 
     }
   }
 
-  const handleAdd = () => { toggleLifestyleTag(category, currentTag.tag_key); goNext() }
+  const handleToggle = () => { toggleLifestyleTag(category, currentTag.tag_key) }
   const handleSkip = () => goNext()
 
   if (!currentTag) return null
@@ -88,16 +88,22 @@ export default function LifestyleSwiperCard({ lifestyleTagsData, onNext, onBack 
         )}
       </div>
 
-      {/* Action buttons */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-        <button onClick={handleSkip} style={S.skipBtn}>Skip</button>
-        <button onClick={handleAdd} style={{ ...S.addBtn, ...(isSelected ? S.addBtnSelected : {}) }}>
-          {isSelected ? '✓ Added' : '+ This is me'}
+      {/* Toggle button */}
+      <div style={{ marginBottom: 12 }}>
+        <button onClick={handleToggle} style={{ ...S.addBtn, width: '100%', ...(isSelected ? S.addBtnSelected : {}) }}>
+          {isSelected ? '✓ This is me — tap to remove' : '+ This is me'}
         </button>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button onClick={goBack} style={S.backLink}>← Back</button>
+      {/* Navigation */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
+        <button onClick={goBack} style={S.skipBtn}>← Back</button>
+        <button onClick={handleSkip} style={{ ...S.skipBtn, flex: 1 }}>
+          {currentIndex === currentTags.length - 1 && categories.indexOf(category) === categories.length - 1 ? 'Finish →' : 'Next →'}
+        </button>
+      </div>
+
+      <div style={{ textAlign: 'center' }}>
         <span style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 600 }}>
           {selectedTotal} trait{selectedTotal !== 1 ? 's' : ''} selected
         </span>

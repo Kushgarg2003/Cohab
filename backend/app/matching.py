@@ -191,25 +191,26 @@ def compute_match_score(a: SurveyResponse, b: SurveyResponse,
     exact_overlap = any(ra == rb for ra in ranges_a for rb in ranges_b)
     budget_pts = 10 if exact_overlap else 5
 
-    # Move-in timeline soft score (5 pts)
-    timeline_a = a.move_in_timeline.value if a.move_in_timeline else None
-    timeline_b = b.move_in_timeline.value if b.move_in_timeline else None
-    if not timeline_a or not timeline_b:
-        timeline_pts = 3.0  # one not set = neutral, partial score
-    elif timeline_a == timeline_b:
-        timeline_pts = 5.0
-    elif timeline_b in TIMELINE_ADJACENCY.get(timeline_a, set()):
-        timeline_pts = 3.0  # adjacent (e.g. ASAP vs 1-month)
+    # Move-in timeline soft score (5 pts) — supports multi-select
+    tls_a = list(a.move_in_timelines or ([a.move_in_timeline.value] if a.move_in_timeline else []))
+    tls_b = list(b.move_in_timelines or ([b.move_in_timeline.value] if b.move_in_timeline else []))
+    if not tls_a or not tls_b:
+        timeline_pts = 3.0  # one not set = neutral
+    elif any(tb in TIMELINE_ADJACENCY.get(ta, set()) for ta in tls_a for tb in tls_b):
+        # Check if any pair is an exact match
+        timeline_pts = 5.0 if any(ta == tb for ta in tls_a for tb in tls_b) else 3.0
     else:
-        timeline_pts = 0.0  # far apart (e.g. ASAP vs 2-3-months)
+        timeline_pts = 0.0  # no adjacent pair found
 
-    # Occupancy type soft score (5 pts)
-    if not a.occupancy_type or not b.occupancy_type:
-        occupancy_pts = 3.0  # one not set = neutral, partial score
-    elif a.occupancy_type == b.occupancy_type:
-        occupancy_pts = 5.0
+    # Occupancy type soft score (5 pts) — supports multi-select
+    ots_a = list(a.occupancy_types or ([a.occupancy_type.value] if a.occupancy_type else []))
+    ots_b = list(b.occupancy_types or ([b.occupancy_type.value] if b.occupancy_type else []))
+    if not ots_a or not ots_b:
+        occupancy_pts = 3.0  # one not set = neutral
+    elif any(oa == ob for oa in ots_a for ob in ots_b):
+        occupancy_pts = 5.0  # at least one matching option
     else:
-        occupancy_pts = 0.0  # different preference (private vs twin-sharing)
+        occupancy_pts = 0.0  # no overlap (only-private vs only-twin-sharing)
 
     # Dealbreaker quality (20 pts) — dynamic denominator: only count fields where
     # at least one user expressed a clear (non-neutral) preference

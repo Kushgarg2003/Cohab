@@ -193,8 +193,13 @@ def save_mandatory_data(survey_id: UUID, data: MandatoryDataRequest, db: Session
     try:
         survey.budget_ranges = data.budget_ranges
         survey.locations = data.locations
-        survey.move_in_timeline = data.move_in_timeline
-        survey.occupancy_type = data.occupancy_type
+        survey.move_in_timelines = data.move_in_timelines or []
+        survey.occupancy_types = data.occupancy_types or []
+        # keep legacy single fields in sync with first selection for backward compat
+        if data.move_in_timelines:
+            survey.move_in_timeline = data.move_in_timelines[0]
+        if data.occupancy_types:
+            survey.occupancy_type = data.occupancy_types[0]
         survey.updated_at = datetime.utcnow()
 
         db.commit()
