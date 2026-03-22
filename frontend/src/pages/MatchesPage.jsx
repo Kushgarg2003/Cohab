@@ -199,6 +199,86 @@ function MatchModal({ match, onClose }) {
   )
 }
 
+const LOADING_STEPS = [
+  { icon: '🔍', text: 'Reading your preferences…' },
+  { icon: '🧬', text: 'Analyzing lifestyle compatibility…' },
+  { icon: '📍', text: 'Checking location overlap…' },
+  { icon: '💬', text: 'Scoring dealbreakers…' },
+  { icon: '✨', text: 'Ranking your top matches…' },
+]
+
+const TIPS = [
+  'Profiles with more lifestyle tags get matched 3× better.',
+  'Your budget range overlaps with the next tier automatically.',
+  'Dealbreakers are checked first — lifestyle fills the rank.',
+  'Mutual matches unlock a group chat instantly.',
+  '"Others" city users appear in every city pool.',
+]
+
+function MatchLoadingScreen() {
+  const [stepIdx, setStepIdx] = useState(0)
+  const [tipIdx, setTipIdx] = useState(0)
+  const [progress, setProgress] = useState(0)
+
+  useEffect(() => {
+    const stepTimer = setInterval(() => {
+      setStepIdx(i => Math.min(i + 1, LOADING_STEPS.length - 1))
+    }, 800)
+    const tipTimer = setInterval(() => {
+      setTipIdx(i => (i + 1) % TIPS.length)
+    }, 3200)
+    const progTimer = setInterval(() => {
+      setProgress(p => Math.min(p + 2, 95))
+    }, 100)
+    return () => { clearInterval(stepTimer); clearInterval(tipTimer); clearInterval(progTimer) }
+  }, [])
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+      {/* Logo */}
+      <div style={{ marginBottom: 40 }}>
+        <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.5 }}>
+          Coloc<span style={{ color: 'var(--primary)' }}>sy</span>
+        </span>
+      </div>
+
+      {/* Animated icon */}
+      <div style={{ fontSize: 52, marginBottom: 20, transition: 'opacity 0.4s', lineHeight: 1 }}>
+        {LOADING_STEPS[stepIdx].icon}
+      </div>
+
+      {/* Current step text */}
+      <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', marginBottom: 28, textAlign: 'center', minHeight: 28, transition: 'opacity 0.4s' }}>
+        {LOADING_STEPS[stepIdx].text}
+      </p>
+
+      {/* Progress bar */}
+      <div style={{ width: '100%', maxWidth: 320, height: 4, background: 'var(--border)', borderRadius: 4, overflow: 'hidden', marginBottom: 40 }}>
+        <div style={{ height: '100%', width: `${progress}%`, background: 'var(--primary)', borderRadius: 4, transition: 'width 0.15s linear' }} />
+      </div>
+
+      {/* Step dots */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 48 }}>
+        {LOADING_STEPS.map((s, i) => (
+          <div key={i} style={{
+            width: i === stepIdx ? 20 : 8, height: 8, borderRadius: 4,
+            background: i <= stepIdx ? 'var(--primary)' : 'var(--border)',
+            transition: 'all 0.3s ease',
+          }} />
+        ))}
+      </div>
+
+      {/* Tip card */}
+      <div style={{ maxWidth: 320, width: '100%', background: 'var(--surface)', border: '1px solid var(--border-2)', borderRadius: 16, padding: '16px 20px' }}>
+        <p style={{ fontSize: 11, fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 6 }}>Did you know?</p>
+        <p style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 500, lineHeight: 1.6, minHeight: 40, transition: 'opacity 0.4s' }}>
+          {TIPS[tipIdx]}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export default function MatchesPage() {
   const navigate = useNavigate()
   const [queue, setQueue] = useState([])
@@ -277,12 +357,7 @@ export default function MatchesPage() {
     return () => window.removeEventListener('keydown', handler)
   }, [handleSwipe])
 
-  if (loading) return (
-    <div style={S.centered}>
-      <div style={S.spinner} />
-      <p style={{ color: 'var(--text-3)', marginTop: 16, fontSize: 14 }}>Finding your matches…</p>
-    </div>
-  )
+  if (loading) return <MatchLoadingScreen />
 
   if (error) return (
     <div style={S.centered}>
