@@ -135,7 +135,7 @@ import SurveyPreview from '../components/SurveyPreview'
 const STEPS = ['name', 'mandatory', 'dealbreakers', 'lifestyle', 'preview']
 const STEP_LABELS = ['Name', 'Basics', 'Dealbreakers', 'Lifestyle', 'Review']
 
-function SectionPicker({ onSelect }) {
+function SectionPicker({ onSelect, onDone }) {
   const sections = [
     { step: 'name',         icon: '👤', label: 'Basic Info',    desc: 'Name, age, gender, phone' },
     { step: 'mandatory',    icon: '🏠', label: 'Preferences',   desc: 'Budget, location, move-in, room type' },
@@ -161,6 +161,10 @@ function SectionPicker({ onSelect }) {
           </button>
         ))}
       </div>
+      <button onClick={onDone}
+        style={{ marginTop: 20, width: '100%', padding: '13px', border: '2px solid var(--border)', borderRadius: 10, background: 'var(--white)', color: 'var(--text-2)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+        ← Back to profile
+      </button>
     </div>
   )
 }
@@ -364,7 +368,7 @@ export default function Dashboard() {
       {/* Content */}
       <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 16px 0' }}>
         {survey.currentStep === 'picker' && (
-          <SectionPicker onSelect={(step) => survey.setCurrentStep(step)} />
+          <SectionPicker onSelect={(step) => survey.setCurrentStep(step)} onDone={() => navigate('/profile')} />
         )}
         {survey.currentStep === 'name' && (
           <BasicInfoScreen onNext={() => survey.setCurrentStep(editMode ? 'picker' : 'mandatory')} />
