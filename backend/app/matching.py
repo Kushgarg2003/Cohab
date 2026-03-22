@@ -118,7 +118,7 @@ _STANDARD_LOCATIONS = [
 ]
 
 # Build area-keyword → city lookup (lowercase area words → city name)
-_AREA_TO_CITY: dict[str, str] = {}
+_AREA_TO_CITY = {}
 for _loc in _STANDARD_LOCATIONS:
     _c, _a = _loc.split(' - ', 1)
     # index every word in the area name for flexible keyword matching
