@@ -44,7 +44,7 @@ def list_all_users(db: Session = Depends(get_db), _: None = Depends(verify_admin
                 "habits": survey.habits or [] if survey else [],
                 "work_study": survey.work_study or [] if survey else [],
                 "pets": survey.pets.value if survey and survey.pets else None,
-                "smoking": survey.smoking.value if survey and survey.smoking else None,
+                "smoking": survey.smoking if survey and survey.smoking else None,
                 "dietary": survey.dietary.value if survey and survey.dietary else None,
                 "gender": survey.gender.value if survey and survey.gender else None,
             } if survey else None

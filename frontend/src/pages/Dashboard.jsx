@@ -135,7 +135,6 @@ import SurveyPreview from '../components/SurveyPreview'
 const STEPS = ['name', 'mandatory', 'dealbreakers', 'lifestyle', 'preview']
 const STEP_LABELS = ['Name', 'Basics', 'Dealbreakers', 'Lifestyle', 'Review']
 
-<<<<<<< HEAD
 function SectionPicker({ onSelect, onDone }) {
   const sections = [
     { step: 'name',         icon: '👤', label: 'Basic Info',    desc: 'Name, age, gender, phone' },
@@ -170,8 +169,7 @@ function SectionPicker({ onSelect, onDone }) {
   )
 }
 
-=======
->>>>>>> parent of b899d2f (Fix edit profile section picker + new user basic info bug)
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const survey = useSurvey()
@@ -363,12 +361,9 @@ export default function Dashboard() {
 
       {/* Content */}
       <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 16px 0' }}>
-<<<<<<< HEAD
         {survey.currentStep === 'picker' && (
           <SectionPicker onSelect={(step) => survey.setCurrentStep(step)} onDone={() => navigate('/profile')} />
         )}
-=======
->>>>>>> parent of b899d2f (Fix edit profile section picker + new user basic info bug)
         {survey.currentStep === 'name' && (
           <BasicInfoScreen onNext={() => survey.setCurrentStep('mandatory')} />
         )}

@@ -267,7 +267,7 @@ def save_dealbreakers(survey_id: UUID, data: DealbreakerRequest, db: Session = D
 
     try:
         survey.pets = data.pets
-        survey.smoking = data.smoking
+        survey.smoking = data.smoking.value if data.smoking else None
         survey.dietary = data.dietary
         survey.gender = data.gender
         survey.updated_at = datetime.utcnow()

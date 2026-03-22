@@ -96,7 +96,7 @@ def get_matches(
                     "habits": survey.habits or [],
                     "work_study": survey.work_study or [],
                     "pets": survey.pets.value if survey.pets else None,
-                    "smoking": survey.smoking.value if survey.smoking else None,
+                    "smoking": survey.smoking if survey.smoking else None,
                     "dietary": survey.dietary.value if survey.dietary else None,
                     "gender": survey.gender.value if survey.gender else None,
                 }
