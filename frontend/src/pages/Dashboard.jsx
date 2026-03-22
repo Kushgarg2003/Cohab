@@ -135,6 +135,7 @@ import SurveyPreview from '../components/SurveyPreview'
 const STEPS = ['name', 'mandatory', 'dealbreakers', 'lifestyle', 'preview']
 const STEP_LABELS = ['Name', 'Basics', 'Dealbreakers', 'Lifestyle', 'Review']
 
+<<<<<<< HEAD
 function SectionPicker({ onSelect, onDone }) {
   const sections = [
     { step: 'name',         icon: '👤', label: 'Basic Info',    desc: 'Name, age, gender, phone' },
@@ -169,13 +170,14 @@ function SectionPicker({ onSelect, onDone }) {
   )
 }
 
+=======
+>>>>>>> parent of b899d2f (Fix edit profile section picker + new user basic info bug)
 export default function Dashboard() {
   const navigate = useNavigate()
   const survey = useSurvey()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [submitted, setSubmitted] = useState(false)
-  const [editMode, setEditMode] = useState(false)
 
   useEffect(() => {
     const init = async () => {
@@ -259,14 +261,8 @@ export default function Dashboard() {
           survey.loadFromLocalStorage(userId)
         }
 
-        // Use backend profile as source of truth — prevents stale localStorage from old user
-        const hasBasicInfo = !!(profile?.name && profile?.date_of_birth && profile?.gender && profile?.phone)
-        if (profile?.survey_completed) {
-          setEditMode(true)
-          survey.setCurrentStep('picker')
-        } else {
-          survey.setCurrentStep(hasBasicInfo ? 'mandatory' : 'name')
-        }
+        const hasBasicInfo = !!(localStorage.getItem('userName') && localStorage.getItem('userDOB') && localStorage.getItem('userGender') && localStorage.getItem('userPhone'))
+        survey.setCurrentStep(hasBasicInfo ? 'mandatory' : 'name')
         setLoading(false)
       } catch (err) {
         setError(err.message || 'Failed to initialize survey')
@@ -283,15 +279,15 @@ export default function Dashboard() {
   }, [survey.mandatoryData, survey.lifestyleTags, survey.dealbreakers, survey.deepDiveResponses])
 
   const handleMandatoryNext = async () => {
-    try { await surveyAPI.saveMandatory(survey.surveyId, survey.mandatoryData); survey.setCurrentStep(editMode ? 'picker' : 'dealbreakers') }
+    try { await surveyAPI.saveMandatory(survey.surveyId, survey.mandatoryData); survey.setCurrentStep('dealbreakers') }
     catch { setError('Failed to save. Please try again.') }
   }
   const handleDealbreakerNext = async () => {
-    try { await surveyAPI.saveDealbreakers(survey.surveyId, survey.dealbreakers); survey.setCurrentStep(editMode ? 'picker' : 'lifestyle') }
+    try { await surveyAPI.saveDealbreakers(survey.surveyId, survey.dealbreakers); survey.setCurrentStep('lifestyle') }
     catch { setError('Failed to save. Please try again.') }
   }
   const handleLifestyleNext = async () => {
-    try { await surveyAPI.saveLifestyle(survey.surveyId, survey.lifestyleTags); survey.setCurrentStep(editMode ? 'picker' : 'preview') }
+    try { await surveyAPI.saveLifestyle(survey.surveyId, survey.lifestyleTags); survey.setCurrentStep('preview') }
     catch { setError('Failed to save. Please try again.') }
   }
   const handleSubmit = async () => {
@@ -357,7 +353,7 @@ export default function Dashboard() {
       </div>
 
       {/* Step label */}
-      {stepIndex >= 0 && survey.currentStep !== 'picker' && (
+      {stepIndex >= 0 && (
         <div style={{ textAlign: 'center', padding: '28px 24px 0' }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary)', letterSpacing: 2, textTransform: 'uppercase' }}>
             Step {stepIndex + 1} — {STEP_LABELS[stepIndex]}
@@ -367,20 +363,23 @@ export default function Dashboard() {
 
       {/* Content */}
       <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 16px 0' }}>
+<<<<<<< HEAD
         {survey.currentStep === 'picker' && (
           <SectionPicker onSelect={(step) => survey.setCurrentStep(step)} onDone={() => navigate('/profile')} />
         )}
+=======
+>>>>>>> parent of b899d2f (Fix edit profile section picker + new user basic info bug)
         {survey.currentStep === 'name' && (
-          <BasicInfoScreen onNext={() => survey.setCurrentStep(editMode ? 'picker' : 'mandatory')} />
+          <BasicInfoScreen onNext={() => survey.setCurrentStep('mandatory')} />
         )}
         {survey.currentStep === 'mandatory' && (
-          <SurveyCard questions={survey.allQuestions?.mandatory || {}} onNext={handleMandatoryNext} onBack={() => editMode ? survey.setCurrentStep('picker') : navigate('/')} />
+          <SurveyCard questions={survey.allQuestions?.mandatory || {}} onNext={handleMandatoryNext} onBack={() => navigate('/')} />
         )}
         {survey.currentStep === 'dealbreakers' && (
-          <DealbreakersSection onNext={handleDealbreakerNext} onBack={() => survey.setCurrentStep(editMode ? 'picker' : 'mandatory')} />
+          <DealbreakersSection onNext={handleDealbreakerNext} onBack={() => survey.setCurrentStep('mandatory')} />
         )}
         {survey.currentStep === 'lifestyle' && (
-          <LifestyleSwiperCard lifestyleTagsData={survey.allQuestions?.lifestyle_tags || {}} onNext={handleLifestyleNext} onBack={() => survey.setCurrentStep(editMode ? 'picker' : 'dealbreakers')} />
+          <LifestyleSwiperCard lifestyleTagsData={survey.allQuestions?.lifestyle_tags || {}} onNext={handleLifestyleNext} onBack={() => survey.setCurrentStep('dealbreakers')} />
         )}
         {survey.currentStep === 'preview' && (
           <SurveyPreview onSubmit={handleSubmit} onBack={() => survey.setCurrentStep('lifestyle')} />
@@ -388,7 +387,7 @@ export default function Dashboard() {
       </div>
 
       {/* Bottom progress bar */}
-      {stepIndex >= 0 && survey.currentStep !== 'picker' && (
+      {stepIndex >= 0 && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(12,12,16,0.95)', backdropFilter: 'blur(12px)', borderTop: '1px solid var(--border)', padding: '10px 24px 14px', zIndex: 20 }}>
           <div style={{ maxWidth: 520, margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
