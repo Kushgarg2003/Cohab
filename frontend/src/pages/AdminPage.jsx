@@ -98,37 +98,52 @@ export default function AdminPage() {
       gender: u.gender || '',
       date_of_birth: u.date_of_birth || '',
       locations: (s.locations || []).join(', '),
+      budget_ranges: (s.budget_ranges || []).join(', '),
+      move_in_timelines: (s.move_in_timelines || []).join(', '),
+      occupancy_types: (s.occupancy_types || []).join(', '),
       smoking: s.smoking || '',
       pets: s.pets || '',
       dietary: s.dietary || '',
+      gender_pref: s.gender || '',
+      social_battery: (s.social_battery || []).join(', '),
+      habits: (s.habits || []).join(', '),
+      work_study: (s.work_study || []).join(', '),
     })
     setEditMode(true)
   }
 
   const handleSaveEdit = async () => {
     setSaving(true)
+    const splitCSV = str => str.split(',').map(s => s.trim()).filter(Boolean)
     try {
       const payload = {
-        name: editFields.name,
-        phone: editFields.phone,
+        name: editFields.name.trim(),
+        phone: editFields.phone.trim(),
         gender: editFields.gender,
         date_of_birth: editFields.date_of_birth,
-        locations: editFields.locations.split(',').map(s => s.trim()).filter(Boolean),
+        locations: splitCSV(editFields.locations),
+        budget_ranges: splitCSV(editFields.budget_ranges),
+        move_in_timelines: splitCSV(editFields.move_in_timelines),
+        occupancy_types: splitCSV(editFields.occupancy_types),
         smoking: editFields.smoking,
         pets: editFields.pets,
         dietary: editFields.dietary,
+        gender_pref: editFields.gender_pref,
+        social_battery: splitCSV(editFields.social_battery),
+        habits: splitCSV(editFields.habits),
+        work_study: splitCSV(editFields.work_study),
       }
       await adminAPI.editUser(profileModal.user.user_id, secret, payload)
-      // Update local state
-      setUsers(prev => prev.map(u => u.user_id === profileModal.user.user_id ? { ...u, name: payload.name, phone: payload.phone, gender: payload.gender } : u))
+      setUsers(prev => prev.map(u => u.user_id === profileModal.user.user_id
+        ? { ...u, name: payload.name, phone: payload.phone, gender: payload.gender } : u))
       setProfileModal(prev => ({
         ...prev,
         user: { ...prev.user, name: payload.name, phone: payload.phone, gender: payload.gender, date_of_birth: payload.date_of_birth },
-        survey: { ...prev.survey, locations: payload.locations, smoking: payload.smoking, pets: payload.pets, dietary: payload.dietary }
+        survey: { ...prev.survey, ...payload }
       }))
       setEditMode(false)
-    } catch {
-      alert('Failed to save changes.')
+    } catch (err) {
+      alert('Failed to save: ' + (err?.response?.data?.detail || err.message || 'unknown error'))
     } finally {
       setSaving(false)
     }
@@ -316,10 +331,11 @@ export default function AdminPage() {
           {/* Basic info */}
           <Section title="Basic Info">
             {editMode ? <>
-              <EditRow label="Name" value={editFields.name} onChange={v => setEditFields(p => ({ ...p, name: v }))} />
-              <EditRow label="Phone" value={editFields.phone} onChange={v => setEditFields(p => ({ ...p, phone: v }))} />
-              <EditRow label="DOB" value={editFields.date_of_birth} onChange={v => setEditFields(p => ({ ...p, date_of_birth: v }))} placeholder="YYYY-MM-DD" />
-              <EditRow label="Gender" value={editFields.gender} onChange={v => setEditFields(p => ({ ...p, gender: v }))} placeholder="male / female / other" />
+              <EditRow label="Name" value={editFields.name} onChange={v => setEditFields(p => ({ ...p, name: v }))} maxLength={100} />
+              <EditRow label="Phone" value={editFields.phone} onChange={v => setEditFields(p => ({ ...p, phone: v }))} maxLength={20} placeholder="+91XXXXXXXXXX" />
+              <EditRow label="DOB" value={editFields.date_of_birth} onChange={v => setEditFields(p => ({ ...p, date_of_birth: v }))} placeholder="YYYY-MM-DD" maxLength={10} />
+              <SelectRow label="Gender" value={editFields.gender} onChange={v => setEditFields(p => ({ ...p, gender: v }))}
+                options={[['', '— clear —'], ['male', 'Male'], ['female', 'Female'], ['other', 'Other']]} />
             </> : <>
               <Row label="Phone" value={profileModal.user.phone} />
               <Row label="DOB" value={profileModal.user.date_of_birth} />
@@ -331,26 +347,47 @@ export default function AdminPage() {
           {profileModal.survey ? (
             <>
               <Section title="Basics">
-                <Row label="Budget" value={profileModal.survey.budget_ranges?.join(', ') || profileModal.survey.budget_range} />
-                {editMode
-                  ? <EditRow label="Locations" value={editFields.locations} onChange={v => setEditFields(p => ({ ...p, locations: v }))} placeholder="comma-separated" />
-                  : <Row label="Locations" value={profileModal.survey.locations?.join(', ')} />
-                }
-                <Row label="Move-in" value={profileModal.survey.move_in_timeline} />
-                <Row label="Room type" value={profileModal.survey.occupancy_type} />
+                {editMode ? <>
+                  <MultiSelectRow label="Budget" value={editFields.budget_ranges} onChange={v => setEditFields(p => ({ ...p, budget_ranges: v }))}
+                    options={['5k-10k', '10k-15k', '15k-20k', '20k-30k', '30k-50k', '50k+']} />
+                  <EditRow label="Locations" value={editFields.locations} onChange={v => setEditFields(p => ({ ...p, locations: v }))} placeholder="City - Area, City (comma-separated)" />
+                  <MultiSelectRow label="Move-in" value={editFields.move_in_timelines} onChange={v => setEditFields(p => ({ ...p, move_in_timelines: v }))}
+                    options={['ASAP', '1-month', '3-months', '6-months', 'flexible']} />
+                  <MultiSelectRow label="Room type" value={editFields.occupancy_types} onChange={v => setEditFields(p => ({ ...p, occupancy_types: v }))}
+                    options={['private', 'twin-sharing', 'triple-sharing', 'any']} />
+                </> : <>
+                  <Row label="Budget" value={profileModal.survey.budget_ranges?.join(', ') || profileModal.survey.budget_range} />
+                  <Row label="Locations" value={profileModal.survey.locations?.join(', ')} />
+                  <Row label="Move-in" value={(profileModal.survey.move_in_timelines || [profileModal.survey.move_in_timeline]).filter(Boolean).join(', ')} />
+                  <Row label="Room type" value={(profileModal.survey.occupancy_types || [profileModal.survey.occupancy_type]).filter(Boolean).join(', ')} />
+                </>}
               </Section>
 
               <Section title="Lifestyle Tags">
-                <TagRow label="Social" tags={profileModal.survey.social_battery} />
-                <TagRow label="Habits" tags={profileModal.survey.habits} />
-                <TagRow label="Work/Study" tags={profileModal.survey.work_study} />
+                {editMode ? <>
+                  <MultiSelectRow label="Social" value={editFields.social_battery} onChange={v => setEditFields(p => ({ ...p, social_battery: v }))}
+                    options={['extrovert', 'introvert', 'ambivert', 'social_butterfly', 'homebody', 'ghost']} />
+                  <MultiSelectRow label="Habits" value={editFields.habits} onChange={v => setEditFields(p => ({ ...p, habits: v }))}
+                    options={['early_bird', 'night_owl', 'clean_freak', 'messy', 'chef', 'fitness_freak', 'bookworm', 'gamer']} />
+                  <MultiSelectRow label="Work/Study" value={editFields.work_study} onChange={v => setEditFields(p => ({ ...p, work_study: v }))}
+                    options={['wfh_warrior', 'office_goer', 'student', 'freelancer', 'hybrid']} />
+                </> : <>
+                  <TagRow label="Social" tags={profileModal.survey.social_battery} />
+                  <TagRow label="Habits" tags={profileModal.survey.habits} />
+                  <TagRow label="Work/Study" tags={profileModal.survey.work_study} />
+                </>}
               </Section>
 
               <Section title="Dealbreakers">
                 {editMode ? <>
-                  <EditRow label="Pets" value={editFields.pets} onChange={v => setEditFields(p => ({ ...p, pets: v }))} placeholder="love / no-pets / fine-with-pets" />
-                  <EditRow label="Smoking" value={editFields.smoking} onChange={v => setEditFields(p => ({ ...p, smoking: v }))} placeholder="non-smoker / smoker / indifferent" />
-                  <EditRow label="Dietary" value={editFields.dietary} onChange={v => setEditFields(p => ({ ...p, dietary: v }))} placeholder="veg / non-veg / vegan / any" />
+                  <SelectRow label="Pets" value={editFields.pets} onChange={v => setEditFields(p => ({ ...p, pets: v }))}
+                    options={[['', '— clear —'], ['love', 'Love pets'], ['have', 'Have pets'], ['no', 'No pets']]} />
+                  <SelectRow label="Smoking" value={editFields.smoking} onChange={v => setEditFields(p => ({ ...p, smoking: v }))}
+                    options={[['', '— clear —'], ['non-smoker', 'Non-smoker'], ['smoker', 'Smoker'], ['smoker-prefer-smoker', 'Smoker (prefer smoker)'], ['outside-only', 'Outside only'], ['indifferent', 'Indifferent']]} />
+                  <SelectRow label="Dietary" value={editFields.dietary} onChange={v => setEditFields(p => ({ ...p, dietary: v }))}
+                    options={[['', '— clear —'], ['veg', 'Vegetarian'], ['non-veg', 'Non-vegetarian']]} />
+                  <SelectRow label="Gender pref" value={editFields.gender_pref} onChange={v => setEditFields(p => ({ ...p, gender_pref: v }))}
+                    options={[['', '— clear —'], ['male', 'Male only'], ['female', 'Female only'], ['neutral', 'No preference']]} />
                 </> : <>
                   <Row label="Pets" value={profileModal.survey.pets} />
                   <Row label="Smoking" value={profileModal.survey.smoking} />
@@ -400,7 +437,7 @@ function Row({ label, value, highlight }) {
   )
 }
 
-function EditRow({ label, value, onChange, placeholder }) {
+function EditRow({ label, value, onChange, placeholder, maxLength }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 16px', borderBottom: '1px solid #161616', gap: 12 }}>
       <span style={{ fontSize: 13, color: '#555', fontWeight: 500, flexShrink: 0 }}>{label}</span>
@@ -408,8 +445,42 @@ function EditRow({ label, value, onChange, placeholder }) {
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
+        maxLength={maxLength}
         style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 6, padding: '5px 10px', color: '#fff', fontSize: 13, outline: 'none', width: '60%', textAlign: 'right' }}
       />
+    </div>
+  )
+}
+
+function SelectRow({ label, value, onChange, options }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 16px', borderBottom: '1px solid #161616', gap: 12 }}>
+      <span style={{ fontSize: 13, color: '#555', fontWeight: 500, flexShrink: 0 }}>{label}</span>
+      <select value={value} onChange={e => onChange(e.target.value)}
+        style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 6, padding: '5px 10px', color: '#fff', fontSize: 13, outline: 'none', width: '60%', textAlign: 'right' }}>
+        {options.map(([val, lbl]) => <option key={val} value={val}>{lbl}</option>)}
+      </select>
+    </div>
+  )
+}
+
+function MultiSelectRow({ label, value, onChange, options }) {
+  const selected = value ? value.split(',').map(s => s.trim()).filter(Boolean) : []
+  const toggle = (opt) => {
+    const next = selected.includes(opt) ? selected.filter(s => s !== opt) : [...selected, opt]
+    onChange(next.join(', '))
+  }
+  return (
+    <div style={{ padding: '8px 16px', borderBottom: '1px solid #161616' }}>
+      <div style={{ fontSize: 13, color: '#555', fontWeight: 500, marginBottom: 6 }}>{label}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {options.map(opt => (
+          <button key={opt} onClick={() => toggle(opt)}
+            style={{ fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20, cursor: 'pointer', border: '1px solid', background: selected.includes(opt) ? 'rgba(99,102,241,0.2)' : 'transparent', color: selected.includes(opt) ? '#818cf8' : '#444', borderColor: selected.includes(opt) ? 'rgba(99,102,241,0.5)' : '#333' }}>
+            {opt.replace(/_/g, ' ')}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

@@ -5,7 +5,8 @@ from uuid import UUID
 from app.database import get_db, settings
 from app.models import (User, SurveyResponse, MatchScore, MutualMatch,
                         UserSwipe, GroupMember, Group, Message,
-                        KitItem, KitDebt, WishlistItem, WishlistVote, GroupInvitation)
+                        KitItem, KitDebt, WishlistItem, WishlistVote, GroupInvitation,
+                        UserGender, PetPreference, DietaryPreference, GenderPreference)
 from app.schemas import APIResponse
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -110,20 +111,43 @@ def edit_user(user_id: str, payload: dict, db: Session = Depends(get_db), _: Non
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Update basic info fields
-    for field in ("name", "phone", "gender", "date_of_birth"):
-        if field in payload:
-            setattr(user, field, payload[field] or None)
+    # Basic info
+    if 'name' in payload:
+        user.name = (payload['name'] or '').strip() or None
+    if 'phone' in payload:
+        user.phone = (payload['phone'] or '').strip() or None
+    if 'date_of_birth' in payload:
+        user.date_of_birth = payload['date_of_birth'] or None
+    if 'gender' in payload:
+        try:
+            user.gender = UserGender(payload['gender']) if payload['gender'] else None
+        except ValueError:
+            raise HTTPException(status_code=422, detail=f"Invalid gender: must be male, female, or other")
 
-    # Update survey fields
-    survey_fields = ("locations", "budget_ranges", "move_in_timelines", "occupancy_types",
-                     "smoking", "pets", "dietary", "gender", "social_battery", "habits", "work_study")
-    survey_payload = {k: v for k, v in payload.items() if k in survey_fields}
-    if survey_payload:
-        survey = db.query(SurveyResponse).filter(SurveyResponse.user_id == user_uuid).first()
-        if survey:
-            for field, value in survey_payload.items():
-                setattr(survey, field, value)
+    # Survey fields
+    survey = db.query(SurveyResponse).filter(SurveyResponse.user_id == user_uuid).first()
+    if survey:
+        for f in ('locations', 'budget_ranges', 'move_in_timelines', 'occupancy_types',
+                  'social_battery', 'habits', 'work_study'):
+            if f in payload:
+                setattr(survey, f, payload[f])
+        if 'smoking' in payload:
+            survey.smoking = payload['smoking'] or None
+        if 'pets' in payload:
+            try:
+                survey.pets = PetPreference(payload['pets']) if payload['pets'] else None
+            except ValueError:
+                raise HTTPException(status_code=422, detail="Invalid pets value: must be have, love, or no")
+        if 'dietary' in payload:
+            try:
+                survey.dietary = DietaryPreference(payload['dietary']) if payload['dietary'] else None
+            except ValueError:
+                raise HTTPException(status_code=422, detail="Invalid dietary value: must be veg or non-veg")
+        if 'gender_pref' in payload:
+            try:
+                survey.gender = GenderPreference(payload['gender_pref']) if payload['gender_pref'] else None
+            except ValueError:
+                raise HTTPException(status_code=422, detail="Invalid gender preference: must be male, female, or neutral")
 
     db.commit()
     return APIResponse(status="success", data={"user_id": user_id}, message="User updated")
