@@ -261,6 +261,10 @@ export const adminAPI = {
   toggleVerify: async (userId, secret) => {
     const response = await api.patch(`/api/admin/users/${userId}/verify`, {}, { headers: { 'x-admin-secret': secret } })
     return response.data.data
+  },
+  editUser: async (userId, secret, payload) => {
+    const response = await api.patch(`/api/admin/users/${userId}`, payload, { headers: { 'x-admin-secret': secret } })
+    return response.data
   }
 }
 

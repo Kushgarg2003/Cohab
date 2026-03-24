@@ -15,6 +15,9 @@ export default function AdminPage() {
   const [profileModal, setProfileModal] = useState(null) // { user, survey }
   const [loadingProfile, setLoadingProfile] = useState(null)
   const [verifyingId, setVerifyingId] = useState(null)
+  const [editMode, setEditMode] = useState(false)
+  const [editFields, setEditFields] = useState({})
+  const [saving, setSaving] = useState(false)
 
   const login = async (e) => {
     e.preventDefault()
@@ -77,10 +80,57 @@ export default function AdminPage() {
     try {
       const data = await surveyAPI.getUserProfile(user.user_id)
       setProfileModal({ user, survey: data.survey })
+      setEditMode(false)
+      setEditFields({})
     } catch {
       alert('Failed to load profile.')
     } finally {
       setLoadingProfile(null)
+    }
+  }
+
+  const handleStartEdit = () => {
+    const u = profileModal.user
+    const s = profileModal.survey || {}
+    setEditFields({
+      name: u.name || '',
+      phone: u.phone || '',
+      gender: u.gender || '',
+      date_of_birth: u.date_of_birth || '',
+      locations: (s.locations || []).join(', '),
+      smoking: s.smoking || '',
+      pets: s.pets || '',
+      dietary: s.dietary || '',
+    })
+    setEditMode(true)
+  }
+
+  const handleSaveEdit = async () => {
+    setSaving(true)
+    try {
+      const payload = {
+        name: editFields.name,
+        phone: editFields.phone,
+        gender: editFields.gender,
+        date_of_birth: editFields.date_of_birth,
+        locations: editFields.locations.split(',').map(s => s.trim()).filter(Boolean),
+        smoking: editFields.smoking,
+        pets: editFields.pets,
+        dietary: editFields.dietary,
+      }
+      await adminAPI.editUser(profileModal.user.user_id, secret, payload)
+      // Update local state
+      setUsers(prev => prev.map(u => u.user_id === profileModal.user.user_id ? { ...u, name: payload.name, phone: payload.phone, gender: payload.gender } : u))
+      setProfileModal(prev => ({
+        ...prev,
+        user: { ...prev.user, name: payload.name, phone: payload.phone, gender: payload.gender, date_of_birth: payload.date_of_birth },
+        survey: { ...prev.survey, locations: payload.locations, smoking: payload.smoking, pets: payload.pets, dietary: payload.dietary }
+      }))
+      setEditMode(false)
+    } catch {
+      alert('Failed to save changes.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -251,22 +301,41 @@ export default function AdminPage() {
                 <div style={{ fontSize: 13, color: '#555' }}>{profileModal.user.email}</div>
               </div>
             </div>
-            <button onClick={() => setProfileModal(null)} style={{ background: 'none', border: 'none', color: '#555', fontSize: 22, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {!editMode
+                ? <button onClick={handleStartEdit} style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8', borderRadius: 8, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Edit</button>
+                : <>
+                    <button onClick={handleSaveEdit} disabled={saving} style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22c55e', borderRadius: 8, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{saving ? 'Saving…' : 'Save'}</button>
+                    <button onClick={() => setEditMode(false)} style={{ background: 'none', border: '1px solid #333', color: '#666', borderRadius: 8, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                  </>
+              }
+              <button onClick={() => setProfileModal(null)} style={{ background: 'none', border: 'none', color: '#555', fontSize: 22, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+            </div>
           </div>
 
           {/* Basic info */}
           <Section title="Basic Info">
-            <Row label="Phone" value={profileModal.user.phone} />
-            <Row label="DOB" value={profileModal.user.date_of_birth} />
-            <Row label="Gender" value={profileModal.user.gender} />
-            <Row label="Survey" value={profileModal.user.survey_completed ? 'Completed' : 'Pending'} highlight={profileModal.user.survey_completed} />
+            {editMode ? <>
+              <EditRow label="Name" value={editFields.name} onChange={v => setEditFields(p => ({ ...p, name: v }))} />
+              <EditRow label="Phone" value={editFields.phone} onChange={v => setEditFields(p => ({ ...p, phone: v }))} />
+              <EditRow label="DOB" value={editFields.date_of_birth} onChange={v => setEditFields(p => ({ ...p, date_of_birth: v }))} placeholder="YYYY-MM-DD" />
+              <EditRow label="Gender" value={editFields.gender} onChange={v => setEditFields(p => ({ ...p, gender: v }))} placeholder="male / female / other" />
+            </> : <>
+              <Row label="Phone" value={profileModal.user.phone} />
+              <Row label="DOB" value={profileModal.user.date_of_birth} />
+              <Row label="Gender" value={profileModal.user.gender} />
+              <Row label="Survey" value={profileModal.user.survey_completed ? 'Completed' : 'Pending'} highlight={profileModal.user.survey_completed} />
+            </>}
           </Section>
 
           {profileModal.survey ? (
             <>
               <Section title="Basics">
                 <Row label="Budget" value={profileModal.survey.budget_ranges?.join(', ') || profileModal.survey.budget_range} />
-                <Row label="Locations" value={profileModal.survey.locations?.join(', ')} />
+                {editMode
+                  ? <EditRow label="Locations" value={editFields.locations} onChange={v => setEditFields(p => ({ ...p, locations: v }))} placeholder="comma-separated" />
+                  : <Row label="Locations" value={profileModal.survey.locations?.join(', ')} />
+                }
                 <Row label="Move-in" value={profileModal.survey.move_in_timeline} />
                 <Row label="Room type" value={profileModal.survey.occupancy_type} />
               </Section>
@@ -278,10 +347,16 @@ export default function AdminPage() {
               </Section>
 
               <Section title="Dealbreakers">
-                <Row label="Pets" value={profileModal.survey.pets} />
-                <Row label="Smoking" value={profileModal.survey.smoking} />
-                <Row label="Dietary" value={profileModal.survey.dietary} />
-                <Row label="Gender pref" value={profileModal.survey.gender} />
+                {editMode ? <>
+                  <EditRow label="Pets" value={editFields.pets} onChange={v => setEditFields(p => ({ ...p, pets: v }))} placeholder="love / no-pets / fine-with-pets" />
+                  <EditRow label="Smoking" value={editFields.smoking} onChange={v => setEditFields(p => ({ ...p, smoking: v }))} placeholder="non-smoker / smoker / indifferent" />
+                  <EditRow label="Dietary" value={editFields.dietary} onChange={v => setEditFields(p => ({ ...p, dietary: v }))} placeholder="veg / non-veg / vegan / any" />
+                </> : <>
+                  <Row label="Pets" value={profileModal.survey.pets} />
+                  <Row label="Smoking" value={profileModal.survey.smoking} />
+                  <Row label="Dietary" value={profileModal.survey.dietary} />
+                  <Row label="Gender pref" value={profileModal.survey.gender} />
+                </>}
               </Section>
 
               {profileModal.survey.deep_dive_responses && Object.keys(profileModal.survey.deep_dive_responses).length > 0 && (
@@ -321,6 +396,20 @@ function Row({ label, value, highlight }) {
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 16px', borderBottom: '1px solid #161616' }}>
       <span style={{ fontSize: 13, color: '#555', fontWeight: 500 }}>{label}</span>
       <span style={{ fontSize: 13, color: highlight ? '#22c55e' : '#aaa', fontWeight: 600, textTransform: 'capitalize' }}>{value || '—'}</span>
+    </div>
+  )
+}
+
+function EditRow({ label, value, onChange, placeholder }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 16px', borderBottom: '1px solid #161616', gap: 12 }}>
+      <span style={{ fontSize: 13, color: '#555', fontWeight: 500, flexShrink: 0 }}>{label}</span>
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 6, padding: '5px 10px', color: '#fff', fontSize: 13, outline: 'none', width: '60%', textAlign: 'right' }}
+      />
     </div>
   )
 }

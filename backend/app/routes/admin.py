@@ -99,6 +99,36 @@ def toggle_verify_user(user_id: str, db: Session = Depends(get_db), _: None = De
     )
 
 
+@router.patch("/users/{user_id}", response_model=APIResponse)
+def edit_user(user_id: str, payload: dict, db: Session = Depends(get_db), _: None = Depends(verify_admin)):
+    """Edit a user's basic info and survey data."""
+    try:
+        user_uuid = UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid user_id")
+    user = db.query(User).filter(User.id == user_uuid).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Update basic info fields
+    for field in ("name", "phone", "gender", "date_of_birth"):
+        if field in payload:
+            setattr(user, field, payload[field] or None)
+
+    # Update survey fields
+    survey_fields = ("locations", "budget_ranges", "move_in_timelines", "occupancy_types",
+                     "smoking", "pets", "dietary", "gender", "social_battery", "habits", "work_study")
+    survey_payload = {k: v for k, v in payload.items() if k in survey_fields}
+    if survey_payload:
+        survey = db.query(SurveyResponse).filter(SurveyResponse.user_id == user_uuid).first()
+        if survey:
+            for field, value in survey_payload.items():
+                setattr(survey, field, value)
+
+    db.commit()
+    return APIResponse(status="success", data={"user_id": user_id}, message="User updated")
+
+
 @router.delete("/users/{user_id}", response_model=APIResponse)
 def delete_user(user_id: str, db: Session = Depends(get_db), _: None = Depends(verify_admin)):
     """Delete a user and all their data. User can re-join with same Google account."""
