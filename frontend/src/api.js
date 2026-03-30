@@ -198,7 +198,11 @@ export const swipesAPI = {
   unmatch: async (userId, matchId) => {
     const response = await api.delete(`/api/swipes/${userId}/matches/${matchId}`)
     return response.data.data
-  }
+  },
+  getLikedMe: async (userId) => {
+    const response = await api.get(`/api/swipes/${userId}/liked-me`)
+    return response.data.data
+  },
 }
 
 export const kitAPI = {
@@ -265,7 +269,15 @@ export const adminAPI = {
   editUser: async (userId, secret, payload) => {
     const response = await api.patch(`/api/admin/users/${userId}`, payload, { headers: { 'x-admin-secret': secret } })
     return response.data
-  }
+  },
+  emailCampaignPreview: async (secret) => {
+    const response = await api.get('/api/admin/email/campaign-preview', { headers: { 'x-admin-secret': secret } })
+    return response.data.data
+  },
+  runEmailCampaign: async (secret, type, extra = {}) => {
+    const response = await api.post('/api/admin/email/campaign', { type, ...extra }, { headers: { 'x-admin-secret': secret } })
+    return response.data
+  },
 }
 
 export default api

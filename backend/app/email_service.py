@@ -91,6 +91,45 @@ def send_welcome_email(to_email: str, name: str) -> bool:
     return _send(to_email, "Welcome to Colocsy 🏠", _base_template(content))
 
 
+def send_complete_survey_email(to_email: str, name: str) -> bool:
+    first_name = name.split()[0] if name else "there"
+    content = f"""
+      <h2>Your profile is almost ready, {first_name}!</h2>
+      <p>You signed up for Colocsy but haven't filled out your roommate profile yet. It takes less than 5 minutes and it's the only way we can match you with compatible people.</p>
+      <p>Without a profile, you won't appear in anyone's matches — and you won't see who's looking for a roommate in your area either.</p>
+      <a href="{APP_URL}/dashboard" class="cta">Complete my profile →</a>
+      <div class="divider"></div>
+      <p style="font-size:13px;">Got questions? Just reply to this email — we're a small team and we actually read these.</p>
+    """
+    return _send(to_email, "Your Colocsy profile is waiting to be completed 🏠", _base_template(content))
+
+
+def send_you_have_likes_email(to_email: str, name: str, like_count: int) -> bool:
+    first_name = name.split()[0] if name else "there"
+    people = f"{like_count} {'person has' if like_count == 1 else 'people have'}"
+    subject_people = f"{like_count} {'person likes' if like_count == 1 else 'people like'}"
+    content = f"""
+      <h2>{people} liked your profile, {first_name}! 👀</h2>
+      <p>Someone on Colocsy thinks you could be a great roommate. Head back and swipe through your matches — your next great living situation might already be waiting for you.</p>
+      <p>Don't leave them hanging. The sooner you check, the better the odds of locking in something great.</p>
+      <a href="{APP_URL}/matches" class="cta">See who liked you →</a>
+      <div class="divider"></div>
+      <p style="font-size:13px;">You're receiving this because you have a completed profile on Colocsy.</p>
+    """
+    return _send(to_email, f"{subject_people} your profile on Colocsy 👀", _base_template(content))
+
+
+def send_custom_broadcast_email(to_email: str, name: str, subject: str, body_html: str) -> bool:
+    first_name = name.split()[0] if name else "there"
+    content = f"""
+      <h2>Hey {first_name},</h2>
+      {body_html}
+      <div class="divider"></div>
+      <p style="font-size:13px;">Questions? Just reply to this email.</p>
+    """
+    return _send(to_email, subject, _base_template(content))
+
+
 def send_match_email(to_email: str, your_name: str, match_name: str, group_id: str) -> bool:
     first_name = your_name.split()[0] if your_name else "there"
     match_first = match_name.split()[0] if match_name else "someone"

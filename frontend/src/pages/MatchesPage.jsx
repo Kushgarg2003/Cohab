@@ -292,6 +292,9 @@ export default function MatchesPage() {
   const [swipeDir, setSwipeDir] = useState(null)
   const [myGroups, setMyGroups] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [activeTab, setActiveTab] = useState('discover') // 'discover' | 'liked-you'
+  const [likedMe, setLikedMe] = useState([])
+  const [likingBack, setLikingBack] = useState(null) // user_id being acted on
   const userId = localStorage.getItem('userId')
   const { notify } = useNotifications()
 
@@ -302,12 +305,14 @@ export default function MatchesPage() {
       swipesAPI.getMatches(userId),
       groupsAPI.getMyGroups(userId).catch(() => ({ groups: [] })),
       groupsAPI.getNotifications(userId).catch(() => ({ unread_count: 0 })),
-    ]).then(([q, m, g, n]) => {
+      swipesAPI.getLikedMe(userId).catch(() => ({ liked_me: [] })),
+    ]).then(([q, m, g, n, l]) => {
       setQueue(q.queue || [])
       setIsRevisit(q.is_revisit || false)
       setMutualMatches(m.matches || [])
       setMyGroups(g.groups || [])
       setUnreadCount(n.unread_count || 0)
+      setLikedMe(l.liked_me || [])
       setLoading(false)
     }).catch(err => { setError(err.message); setLoading(false) })
   }, [userId])
@@ -322,6 +327,30 @@ export default function MatchesPage() {
       setMutualMatches(prev => prev.filter(m => m.match_id !== matchId))
     } catch (e) {
       console.error('Failed to unmatch', e)
+    }
+  }
+
+  const handleLikeBack = async (person, action) => {
+    setLikingBack(person.user_id)
+    try {
+      const result = await swipesAPI.swipe(userId, person.user_id, action)
+      // Remove from liked-me list regardless of action
+      setLikedMe(prev => prev.filter(p => p.user_id !== person.user_id))
+      if (result.mutual_match) {
+        setMatchModal({ name: person.name, group_id: result.group_id })
+        setMutualMatches(prev => [...prev, {
+          user_id: person.user_id,
+          name: person.name,
+          picture: person.picture,
+          group_id: result.group_id,
+          is_verified: person.is_verified,
+        }])
+        notify("It's a Match!", `You and ${person.name} liked each other.`)
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLikingBack(null)
     }
   }
 
@@ -375,27 +404,134 @@ export default function MatchesPage() {
       {matchModal && <MatchModal match={matchModal} onClose={() => setMatchModal(null)} />}
 
       {/* Header */}
-      <div style={{ background: 'rgba(12,12,16,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
-        <button onClick={() => navigate('/matches')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
-          <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.5 }}>
-            Coloc<span style={{ color: 'var(--primary)' }}>sy</span>
-          </span>
-        </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {mutualMatches.length > 0 && (
-            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)', background: 'var(--green-light)', padding: '4px 10px', borderRadius: 20 }}>
-              🎉 {mutualMatches.length} matched
+      <div style={{ background: 'rgba(12,12,16,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 10 }}>
+        <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <button onClick={() => navigate('/matches')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+            <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', letterSpacing: -0.5 }}>
+              Coloc<span style={{ color: 'var(--primary)' }}>sy</span>
             </span>
-          )}
-          <BellIcon count={unreadCount} onClick={() => navigate('/notifications')} />
-          <button
-            onClick={() => { localStorage.clear(); navigate('/') }}
-            style={{ background: 'var(--surface-2)', border: '1px solid var(--border-2)', color: 'var(--text-3)', fontSize: 12, fontWeight: 600, padding: '6px 12px', borderRadius: 8, cursor: 'pointer' }}
-          >Sign out</button>
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {mutualMatches.length > 0 && (
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)', background: 'var(--green-light)', padding: '4px 10px', borderRadius: 20 }}>
+                🎉 {mutualMatches.length} matched
+              </span>
+            )}
+            <BellIcon count={unreadCount} onClick={() => navigate('/notifications')} />
+            <button
+              onClick={() => { localStorage.clear(); navigate('/') }}
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border-2)', color: 'var(--text-3)', fontSize: 12, fontWeight: 600, padding: '6px 12px', borderRadius: 8, cursor: 'pointer' }}
+            >Sign out</button>
+          </div>
+        </div>
+        {/* Tab switcher */}
+        <div style={{ display: 'flex', borderTop: '1px solid var(--border)' }}>
+          {[
+            { key: 'discover', label: 'Discover' },
+            { key: 'liked-you', label: `Liked You${likedMe.length > 0 ? ` (${likedMe.length})` : ''}` },
+          ].map(tab => (
+            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+              style={{
+                flex: 1, padding: '12px 0', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                background: 'none', border: 'none',
+                color: activeTab === tab.key ? 'var(--primary)' : 'var(--text-3)',
+                borderBottom: activeTab === tab.key ? '2px solid var(--primary)' : '2px solid transparent',
+                transition: 'all 0.2s',
+              }}>
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '24px 16px' }}>
+
+      {/* ── Liked You tab ── */}
+      {activeTab === 'liked-you' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {likedMe.length === 0 ? (
+            <div style={{ background: 'var(--surface)', borderRadius: 24, padding: 48, textAlign: 'center', border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>👀</div>
+              <h3 style={{ fontWeight: 800, color: 'var(--text)', marginBottom: 8, fontSize: 20 }}>No likes yet</h3>
+              <p style={{ color: 'var(--text-2)', fontSize: 14, lineHeight: 1.6 }}>
+                When someone likes your profile, they'll appear here. Keep your profile up to date to attract more matches!
+              </p>
+            </div>
+          ) : (
+            likedMe.map(person => {
+              const snap = person.survey_snapshot || {}
+              const tags = [...(snap.social_battery || []), ...(snap.habits || []), ...(snap.work_study || [])].slice(0, 3)
+              const score = person.score
+              const busy = likingBack === person.user_id
+              return (
+                <div key={person.user_id} style={{ background: 'var(--surface)', borderRadius: 20, border: '1px solid var(--border-2)', overflow: 'hidden' }}>
+                  {/* Top row */}
+                  <div style={{ background: `linear-gradient(135deg, ${SCORE_COLOR(score)}18 0%, transparent 60%)`, borderBottom: '1px solid var(--border)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <Avatar userId={person.user_id} name={person.name} picture={person.picture} size={48} />
+                      <div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {person.name || 'Anonymous'}
+                          {person.is_verified && (
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                              <circle cx="12" cy="12" r="12" fill="#3b82f6" />
+                              <path d="M7 12.5l3.5 3.5 6.5-7" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: SCORE_COLOR(score) + '20', color: SCORE_COLOR(score) }}>
+                          {SCORE_LABEL(score)} · {Math.round(score)}
+                        </span>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 20 }}>❤️</span>
+                  </div>
+                  {/* Info */}
+                  <div style={{ padding: '12px 20px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ background: 'var(--surface-2)', borderRadius: 10, padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 6, border: '1px solid var(--border)' }}>
+                      {snap.budget_range && <Row icon="💰" label="Budget" value={snap.budget_range} />}
+                      {snap.locations?.length > 0 && <Row icon="📍" label="Areas" value={snap.locations.join(', ')} />}
+                      {snap.move_in_timeline && <Row icon="📅" label="Move-in" value={snap.move_in_timeline} />}
+                    </div>
+                    {tags.length > 0 && (
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {tags.map(t => (
+                          <span key={t} style={{ fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20, background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>
+                            {t.replace(/_/g, ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {/* Action buttons */}
+                    <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                      <button
+                        onClick={() => handleLikeBack(person, 'pass')}
+                        disabled={busy}
+                        style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '1.5px solid var(--border-2)', background: 'var(--surface-2)', color: '#EF4444', fontSize: 18, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.5 : 1 }}
+                      >
+                        {busy ? '…' : '✕'}
+                      </button>
+                      <button
+                        onClick={() => handleLikeBack(person, 'like')}
+                        disabled={busy || mutualMatches.length >= 6}
+                        style={{ flex: 2, padding: '10px 0', borderRadius: 10, border: '1.5px solid rgba(232,72,28,0.3)', background: 'var(--primary)', color: 'white', fontSize: 15, fontWeight: 700, cursor: (busy || mutualMatches.length >= 6) ? 'not-allowed' : 'pointer', opacity: (busy || mutualMatches.length >= 6) ? 0.5 : 1 }}
+                      >
+                        {busy ? '…' : '♥ Like back'}
+                      </button>
+                    </div>
+                    {mutualMatches.length >= 6 && (
+                      <p style={{ fontSize: 11, color: 'var(--text-3)', textAlign: 'center', margin: 0 }}>Match limit reached — unmatch someone first</p>
+                    )}
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+      )}
+
+      {/* ── Discover tab ── */}
+      {activeTab === 'discover' && <>
 
         {/* Revisit indicator only */}
         {isRevisit && (
@@ -484,10 +620,11 @@ export default function MatchesPage() {
             </div>
           </div>
         )}
+      </>}
       </div>
 
-      {/* Fixed swipe buttons — always visible on mobile */}
-      {!exhausted && mutualMatches.length < 6 && (
+      {/* Fixed swipe buttons — always visible on mobile, only in discover tab */}
+      {activeTab === 'discover' && !exhausted && mutualMatches.length < 6 && (
         <div style={{ position: 'fixed', bottom: 64, left: 0, right: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20, zIndex: 15, pointerEvents: 'none' }}>
           <button onClick={() => handleSwipe('pass')} disabled={swiping}
             style={{ width: 60, height: 60, borderRadius: '50%', border: '1.5px solid var(--border-2)', background: 'var(--surface)', color: '#EF4444', fontSize: 22, cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.5)', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'all' }}>

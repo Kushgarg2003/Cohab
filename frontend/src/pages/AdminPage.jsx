@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { adminAPI, surveyAPI } from '../api'
 
+const RESEND_FREE_DAILY_LIMIT = 100
+
 export default function AdminPage() {
   const [secret, setSecret] = useState('')
   const [authed, setAuthed] = useState(false)
@@ -18,6 +20,14 @@ export default function AdminPage() {
   const [editMode, setEditMode] = useState(false)
   const [editFields, setEditFields] = useState({})
   const [saving, setSaving] = useState(false)
+
+  // Email campaigns
+  const [campaignPreview, setCampaignPreview] = useState(null)
+  const [loadingPreview, setLoadingPreview] = useState(false)
+  const [runningCampaign, setRunningCampaign] = useState(null) // campaign type string
+  const [campaignResults, setCampaignResults] = useState({}) // { type: { sent, failed } }
+  const [customSubject, setCustomSubject] = useState('')
+  const [customBody, setCustomBody] = useState('')
 
   const login = async (e) => {
     e.preventDefault()
@@ -149,6 +159,41 @@ export default function AdminPage() {
     }
   }
 
+  const handleLoadPreview = async () => {
+    setLoadingPreview(true)
+    try {
+      const data = await adminAPI.emailCampaignPreview(secret)
+      setCampaignPreview(data)
+    } catch {
+      alert('Failed to load campaign preview.')
+    } finally {
+      setLoadingPreview(false)
+    }
+  }
+
+  const handleRunCampaign = async (type, label) => {
+    const preview = campaignPreview?.[type]
+    const count = preview?.count ?? '?'
+    if (count > RESEND_FREE_DAILY_LIMIT) {
+      if (!confirm(`⚠️ This will send ${count} emails but your Resend free plan allows only ${RESEND_FREE_DAILY_LIMIT}/day. Some emails may fail. Continue anyway?`)) return
+    } else {
+      if (!confirm(`Send "${label}" email to ${count} user${count !== 1 ? 's' : ''}?`)) return
+    }
+    setRunningCampaign(type)
+    try {
+      const extra = type === 'custom' ? { subject: customSubject, body_html: customBody } : {}
+      const res = await adminAPI.runEmailCampaign(secret, type, extra)
+      setCampaignResults(prev => ({ ...prev, [type]: res.data }))
+      // Refresh preview counts
+      const updated = await adminAPI.emailCampaignPreview(secret)
+      setCampaignPreview(updated)
+    } catch (err) {
+      alert('Campaign failed: ' + (err?.response?.data?.detail || err.message || 'unknown error'))
+    } finally {
+      setRunningCampaign(null)
+    }
+  }
+
   const filtered = users.filter(u =>
     u.name?.toLowerCase().includes(search.toLowerCase()) ||
     u.email?.toLowerCase().includes(search.toLowerCase())
@@ -220,6 +265,89 @@ export default function AdminPage() {
               <div style={{ fontSize: 12, color: '#555', marginTop: 2, fontWeight: 500 }}>{label}</div>
             </div>
           ))}
+        </div>
+
+        {/* Email Campaigns */}
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff' }}>Email Campaigns</h2>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#555' }}>Resend free plan: {RESEND_FREE_DAILY_LIMIT} emails/day · sending from hello@colocsy.com</p>
+            </div>
+            <button
+              onClick={handleLoadPreview}
+              disabled={loadingPreview}
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #333', color: '#aaa', borderRadius: 8, padding: '7px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            >
+              {loadingPreview ? 'Loading…' : campaignPreview ? 'Refresh counts' : 'Load audience counts'}
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
+            {/* Campaign: Incomplete Survey */}
+            <CampaignCard
+              title="Complete Your Survey"
+              description="Nudge users who signed up but never filled out their roommate profile."
+              count={campaignPreview?.incomplete_survey?.count}
+              result={campaignResults['incomplete_survey']}
+              running={runningCampaign === 'incomplete_survey'}
+              onSend={() => handleRunCampaign('incomplete_survey', 'Complete Your Survey')}
+              previewLoaded={!!campaignPreview}
+              dailyLimit={RESEND_FREE_DAILY_LIMIT}
+              accentColor="#e8481c"
+            />
+
+            {/* Campaign: Has Likes */}
+            <CampaignCard
+              title="Someone Liked You"
+              description="Remind users with completed profiles that others have liked them — bring them back to swipe."
+              count={campaignPreview?.has_likes?.count}
+              result={campaignResults['has_likes']}
+              running={runningCampaign === 'has_likes'}
+              onSend={() => handleRunCampaign('has_likes', 'Someone Liked You')}
+              previewLoaded={!!campaignPreview}
+              dailyLimit={RESEND_FREE_DAILY_LIMIT}
+              accentColor="#6c47ff"
+            />
+
+            {/* Campaign: Custom Broadcast */}
+            <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4 }}>Custom Broadcast</div>
+                <div style={{ fontSize: 12, color: '#555', lineHeight: 1.5 }}>
+                  Send a custom message to all {campaignPreview ? campaignPreview.all_users.count : '…'} users with an email address.
+                  {campaignPreview?.all_users?.count > RESEND_FREE_DAILY_LIMIT && (
+                    <span style={{ color: '#f59e0b', display: 'block', marginTop: 4 }}>⚠️ Exceeds daily limit of {RESEND_FREE_DAILY_LIMIT}</span>
+                  )}
+                </div>
+              </div>
+              <input
+                placeholder="Subject line…"
+                value={customSubject}
+                onChange={e => setCustomSubject(e.target.value)}
+                style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: 6, padding: '8px 12px', color: '#fff', fontSize: 13, outline: 'none' }}
+              />
+              <textarea
+                placeholder="Body (HTML allowed, e.g. <p>Hi there!</p>)"
+                value={customBody}
+                onChange={e => setCustomBody(e.target.value)}
+                rows={4}
+                style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: 6, padding: '8px 12px', color: '#fff', fontSize: 13, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
+              />
+              {campaignResults['custom'] && (
+                <div style={{ fontSize: 12, color: '#22c55e', fontWeight: 600 }}>
+                  Sent {campaignResults['custom'].sent} · Failed {campaignResults['custom'].failed}
+                </div>
+              )}
+              <button
+                onClick={() => handleRunCampaign('custom', 'Custom Broadcast')}
+                disabled={runningCampaign === 'custom' || !campaignPreview || !customSubject.trim() || !customBody.trim()}
+                style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', borderRadius: 8, padding: '8px 0', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: (runningCampaign === 'custom' || !campaignPreview || !customSubject.trim() || !customBody.trim()) ? 0.5 : 1 }}
+              >
+                {runningCampaign === 'custom' ? 'Sending…' : 'Send to all users'}
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Table */}
@@ -414,6 +542,49 @@ export default function AdminPage() {
       </div>
     )}
     </>
+  )
+}
+
+function CampaignCard({ title, description, count, result, running, onSend, previewLoaded, dailyLimit, accentColor }) {
+  const overLimit = count > dailyLimit
+  return (
+    <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{title}</div>
+        <div style={{ fontSize: 12, color: '#555', lineHeight: 1.5 }}>{description}</div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 28, fontWeight: 800, color: previewLoaded ? '#fff' : '#333' }}>
+          {previewLoaded ? (count ?? 0) : '—'}
+        </span>
+        <span style={{ fontSize: 12, color: '#555' }}>users</span>
+        {overLimit && (
+          <span style={{ fontSize: 11, color: '#f59e0b', fontWeight: 600, marginLeft: 4 }}>⚠️ &gt;{dailyLimit}/day limit</span>
+        )}
+      </div>
+      {result && (
+        <div style={{ fontSize: 12, fontWeight: 600, color: result.failed > 0 ? '#f59e0b' : '#22c55e' }}>
+          Sent {result.sent} · Failed {result.failed}
+        </div>
+      )}
+      <button
+        onClick={onSend}
+        disabled={running || !previewLoaded || count === 0}
+        style={{
+          background: `rgba(${accentColor === '#e8481c' ? '232,72,28' : '108,71,255'},0.1)`,
+          border: `1px solid rgba(${accentColor === '#e8481c' ? '232,72,28' : '108,71,255'},0.3)`,
+          color: accentColor,
+          borderRadius: 8,
+          padding: '8px 0',
+          fontSize: 13,
+          fontWeight: 700,
+          cursor: (running || !previewLoaded || count === 0) ? 'not-allowed' : 'pointer',
+          opacity: (running || !previewLoaded || count === 0) ? 0.5 : 1,
+        }}
+      >
+        {running ? 'Sending…' : `Send to ${previewLoaded ? count : '…'} users`}
+      </button>
+    </div>
   )
 }
 

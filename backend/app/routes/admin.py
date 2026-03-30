@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from uuid import UUID
 from app.database import get_db, settings
 from app.models import (User, SurveyResponse, MatchScore, MutualMatch,
-                        UserSwipe, GroupMember, Group, Message,
+                        UserSwipe, SwipeAction, GroupMember, Group, Message,
                         KitItem, KitDebt, WishlistItem, WishlistVote, GroupInvitation,
                         UserGender, PetPreference, DietaryPreference, GenderPreference)
 from app.schemas import APIResponse
@@ -151,6 +151,141 @@ def edit_user(user_id: str, payload: dict, db: Session = Depends(get_db), _: Non
 
     db.commit()
     return APIResponse(status="success", data={"user_id": user_id}, message="User updated")
+
+
+@router.get("/email/campaign-preview", response_model=APIResponse)
+def email_campaign_preview(db: Session = Depends(get_db), _: None = Depends(verify_admin)):
+    """Return counts and user lists for each email campaign type (dry-run)."""
+    # Incomplete survey
+    incomplete_users = (
+        db.query(User)
+        .filter(User.survey_completed == False, User.email.isnot(None))
+        .order_by(User.created_at.desc())
+        .all()
+    )
+
+    # Users with incoming likes (completed survey, at least one LIKE swipe targeting them)
+    liked_target_ids = (
+        db.query(UserSwipe.target_id)
+        .filter(UserSwipe.action == SwipeAction.LIKE)
+        .distinct()
+        .subquery()
+    )
+    liked_users = (
+        db.query(User)
+        .filter(
+            User.survey_completed == True,
+            User.email.isnot(None),
+            User.id.in_(liked_target_ids),
+        )
+        .order_by(User.created_at.desc())
+        .all()
+    )
+
+    # All users (for custom broadcast)
+    all_users = db.query(User).filter(User.email.isnot(None)).all()
+
+    def _preview(users):
+        return {
+            "count": len(users),
+            "users": [{"user_id": str(u.id), "name": u.name, "email": u.email} for u in users],
+        }
+
+    return APIResponse(
+        status="success",
+        data={
+            "incomplete_survey": _preview(incomplete_users),
+            "has_likes": _preview(liked_users),
+            "all_users": _preview(all_users),
+        },
+        message="Campaign preview ready",
+    )
+
+
+@router.post("/email/campaign", response_model=APIResponse)
+def run_email_campaign(payload: dict, db: Session = Depends(get_db), _: None = Depends(verify_admin)):
+    """
+    Run an email campaign.
+    payload.type: 'incomplete_survey' | 'has_likes' | 'custom'
+    For 'custom': payload.subject (str) and payload.body_html (str) are required.
+    """
+    from app.email_service import (
+        send_complete_survey_email,
+        send_you_have_likes_email,
+        send_custom_broadcast_email,
+    )
+
+    campaign_type = payload.get("type")
+    if campaign_type not in ("incomplete_survey", "has_likes", "custom"):
+        raise HTTPException(status_code=422, detail="type must be 'incomplete_survey', 'has_likes', or 'custom'")
+
+    # Test mode: send only to the provided test_to address
+    test_to = payload.get("test_to", "").strip()
+    if test_to:
+        if campaign_type == "incomplete_survey":
+            ok = send_complete_survey_email(test_to, "Admin")
+        elif campaign_type == "has_likes":
+            ok = send_you_have_likes_email(test_to, "Admin", 3)
+        elif campaign_type == "custom":
+            subject = payload.get("subject", "").strip()
+            body_html = payload.get("body_html", "").strip()
+            if not subject or not body_html:
+                raise HTTPException(status_code=422, detail="subject and body_html are required for custom campaigns")
+            ok = send_custom_broadcast_email(test_to, "Admin", subject, body_html)
+        return APIResponse(
+            status="success",
+            data={"sent": 1 if ok else 0, "failed": 0 if ok else 1, "total": 1, "test": True},
+            message=f"Test email {'sent' if ok else 'failed'} to {test_to}",
+        )
+
+    sent = 0
+    failed = 0
+
+    if campaign_type == "incomplete_survey":
+        users = (
+            db.query(User)
+            .filter(User.survey_completed == False, User.email.isnot(None))
+            .all()
+        )
+        for user in users:
+            ok = send_complete_survey_email(user.email, user.name or "there")
+            sent += 1 if ok else 0
+            failed += 0 if ok else 1
+
+    elif campaign_type == "has_likes":
+        like_counts_sq = (
+            db.query(UserSwipe.target_id, func.count(UserSwipe.id).label("like_count"))
+            .filter(UserSwipe.action == SwipeAction.LIKE)
+            .group_by(UserSwipe.target_id)
+            .subquery()
+        )
+        rows = (
+            db.query(User, like_counts_sq.c.like_count)
+            .join(like_counts_sq, User.id == like_counts_sq.c.target_id)
+            .filter(User.survey_completed == True, User.email.isnot(None))
+            .all()
+        )
+        for user, like_count in rows:
+            ok = send_you_have_likes_email(user.email, user.name or "there", like_count)
+            sent += 1 if ok else 0
+            failed += 0 if ok else 1
+
+    elif campaign_type == "custom":
+        subject = payload.get("subject", "").strip()
+        body_html = payload.get("body_html", "").strip()
+        if not subject or not body_html:
+            raise HTTPException(status_code=422, detail="subject and body_html are required for custom campaigns")
+        users = db.query(User).filter(User.email.isnot(None)).all()
+        for user in users:
+            ok = send_custom_broadcast_email(user.email, user.name or "there", subject, body_html)
+            sent += 1 if ok else 0
+            failed += 0 if ok else 1
+
+    return APIResponse(
+        status="success",
+        data={"sent": sent, "failed": failed, "total": sent + failed},
+        message=f"Campaign complete: {sent} sent, {failed} failed",
+    )
 
 
 @router.delete("/users/{user_id}", response_model=APIResponse)

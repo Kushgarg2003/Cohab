@@ -272,6 +272,72 @@ def unmatch(user_id: UUID, match_id: UUID, db: Session = Depends(get_db)):
     return APIResponse(status="success", data={}, message="Unmatched successfully")
 
 
+@router.get("/{user_id}/liked-me", response_model=APIResponse)
+def get_liked_me(user_id: UUID, db: Session = Depends(get_db)):
+    """Get users who liked the current user but are not yet a mutual match."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Who liked me
+    liker_ids = {
+        s.swiper_id
+        for s in db.query(UserSwipe).filter(
+            UserSwipe.target_id == user_id,
+            UserSwipe.action == SwipeAction.LIKE,
+        ).all()
+    }
+
+    # Remove already-mutually-matched users
+    matched_ids = set()
+    for m in db.query(MutualMatch).filter(
+        (MutualMatch.user_a_id == user_id) | (MutualMatch.user_b_id == user_id)
+    ).all():
+        matched_ids.add(m.user_b_id if m.user_a_id == user_id else m.user_a_id)
+
+    pending_ids = liker_ids - matched_ids
+
+    # What I've swiped on (to show already-swiped state)
+    my_swipes = {
+        s.target_id: s.action.value
+        for s in db.query(UserSwipe).filter(UserSwipe.swiper_id == user_id).all()
+    }
+
+    result = []
+    for liker_id in pending_ids:
+        liker = db.query(User).filter(User.id == liker_id).first()
+        if not liker or not liker.survey_completed:
+            continue
+        survey = db.query(SurveyResponse).filter(SurveyResponse.user_id == liker_id).first()
+        match = _get_or_compute_score(user_id, liker_id, db)
+        result.append({
+            "user_id": str(liker_id),
+            "name": liker.name,
+            "picture": liker.picture,
+            "is_verified": liker.is_verified or False,
+            "score": match.score if match else 0,
+            "breakdown": match.breakdown if match else {},
+            "my_action": my_swipes.get(liker_id),  # "like"/"pass"/None
+            "survey_snapshot": {
+                "budget_range": (survey.budget_ranges[0] if survey and survey.budget_ranges else (survey.budget_range.value if survey and survey.budget_range else None)),
+                "locations": survey.locations or [] if survey else [],
+                "move_in_timeline": survey.move_in_timeline.value if survey and survey.move_in_timeline else None,
+                "occupancy_type": survey.occupancy_type.value if survey and survey.occupancy_type else None,
+                "social_battery": survey.social_battery or [] if survey else [],
+                "habits": survey.habits or [] if survey else [],
+                "work_study": survey.work_study or [] if survey else [],
+            } if survey else {},
+        })
+
+    result.sort(key=lambda x: x["score"], reverse=True)
+
+    return APIResponse(
+        status="success",
+        data={"liked_me": result, "total": len(result)},
+        message=f"{len(result)} users liked you",
+    )
+
+
 @router.get("/{user_id}/matches", response_model=APIResponse)
 def get_mutual_matches(user_id: UUID, db: Session = Depends(get_db)):
     """Get all mutual matches for a user."""
