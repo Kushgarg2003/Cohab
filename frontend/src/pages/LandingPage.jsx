@@ -64,7 +64,7 @@ export default function LandingPage() {
         <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'fadeIn 0.6s ease' }}>
           {/* Badge */}
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', letterSpacing: 2.5, marginBottom: 28, textTransform: 'uppercase', background: 'var(--primary-light)', padding: '6px 16px', borderRadius: 20, border: '1px solid rgba(232,72,28,0.2)' }}>
-            Bangalore · Mumbai · Hyderabad
+            Find your roommate, anywhere
           </div>
 
           <h1 style={{ fontSize: 'clamp(40px, 8vw, 72px)', fontWeight: 800, lineHeight: 1.05, color: 'var(--text)', marginBottom: 24, letterSpacing: -2.5, maxWidth: 720 }}>

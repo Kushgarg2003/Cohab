@@ -94,14 +94,17 @@ def send_welcome_email(to_email: str, name: str) -> bool:
 def send_complete_survey_email(to_email: str, name: str) -> bool:
     first_name = name.split()[0] if name else "there"
     content = f"""
-      <h2>Your profile is almost ready, {first_name}!</h2>
-      <p>You signed up for Colocsy but haven't filled out your roommate profile yet. It takes less than 5 minutes and it's the only way we can match you with compatible people.</p>
-      <p>Without a profile, you won't appear in anyone's matches — and you won't see who's looking for a roommate in your area either.</p>
+      <h2>Hey {first_name},</h2>
+      <p>You signed up for Colocsy but never finished your profile.</p>
+      <p>That means right now, people are getting matched near you — and you're not showing up in any of them.</p>
+      <p>The survey takes 5 minutes. It's the reason Colocsy works: we match on how you <em>actually</em> live — sleep schedule, cleanliness, whether you cook, work from home, tolerate pets — not just budget and location.</p>
+      <p>That's what separates a roommate you'll actually like from a horror story.</p>
       <a href="{APP_URL}/dashboard" class="cta">Complete my profile →</a>
       <div class="divider"></div>
-      <p style="font-size:13px;">Got questions? Just reply to this email — we're a small team and we actually read these.</p>
+      <p style="font-size:13px;">If you've already moved in somewhere, ignore this. But if you're still looking — 5 minutes now could save you months of stress.</p>
+      <p style="font-size:13px;">We're a small team and actually read replies. Any questions? Just hit reply.</p>
     """
-    return _send(to_email, "Your Colocsy profile is waiting to be completed 🏠", _base_template(content))
+    return _send(to_email, f"{first_name}, you signed up but vanished", _base_template(content))
 
 
 def send_you_have_likes_email(to_email: str, name: str, like_count: int) -> bool:
