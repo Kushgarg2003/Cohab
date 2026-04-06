@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.database import engine, Base, settings
-from app.routes import survey, users, matching, groups, auth, admin, swipes, chat, kit
+from app.routes import survey, users, matching, groups, auth, admin, swipes, chat, kit, communication
 from app.models import LifestyleTag, LifestyleCategory
 
 # Initialize database tables
@@ -52,6 +52,20 @@ def run_migrations():
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_mutual_matches_b ON mutual_matches (user_b_id)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_messages_group ON messages (group_id)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_match_scores_pair ON match_scores (user_a_id, user_b_id)"))
+        # Email communication system
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS email_unsubscribed BOOLEAN DEFAULT FALSE"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS unsubscribe_token VARCHAR(64)"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS email_logs (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                email_type VARCHAR(50) NOT NULL,
+                subject VARCHAR(255),
+                sent_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_email_logs_user ON email_logs (user_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_email_logs_type ON email_logs (email_type, sent_at)"))
         conn.commit()
 
 run_migrations()
@@ -173,6 +187,7 @@ app.include_router(admin.router)
 app.include_router(swipes.router)
 app.include_router(chat.router)
 app.include_router(kit.router)
+app.include_router(communication.router)
 
 # Health check
 @app.get("/health")

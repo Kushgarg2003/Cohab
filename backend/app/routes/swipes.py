@@ -237,6 +237,24 @@ def record_swipe(user_id: UUID, payload: dict, db: Session = Depends(get_db)):
                         send_match_email(user_b.email, user_b.name or "", user_a.name or "Your match", group_id)
                 threading.Thread(target=_send_match_emails, daemon=True).start()
 
+    # Auto-trigger "someone liked you" email for the target (non-blocking)
+    if action == SwipeAction.LIKE and not mutual:
+        import threading
+        from app.routes.communication import _is_eligible_for_likes_email
+        from app.email_service import send_you_have_likes_email
+        from app.models import UserSwipe as _US, SwipeAction as _SA
+        target_user = db.query(User).filter(User.id == target_id).first()
+        if target_user and _is_eligible_for_likes_email(target_user, db):
+            like_count = db.query(_US).filter(
+                _US.target_id == target_id, _US.action == _SA.LIKE
+            ).count()
+            def _send_likes_email():
+                send_you_have_likes_email(
+                    target_user.email, target_user.name or "there",
+                    like_count, user=target_user, db=db
+                )
+            threading.Thread(target=_send_likes_email, daemon=True).start()
+
     return APIResponse(
         status="success",
         data={

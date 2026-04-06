@@ -67,6 +67,8 @@ class User(Base):
     google_id = Column(String(255), unique=True, nullable=True)
     email = Column(String(255), unique=True, nullable=True)
     picture = Column(String(500), nullable=True)
+    email_unsubscribed = Column(Boolean, default=False)
+    unsubscribe_token = Column(String(64), unique=True, nullable=True)
 
     # Relationships
     survey_response = relationship("SurveyResponse", back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -340,3 +342,17 @@ class WishlistVote(Base):
     voted_at = Column(DateTime, default=datetime.utcnow)
 
     item = relationship("WishlistItem", back_populates="votes")
+
+
+# ========== Email Logs ==========
+
+class EmailLog(Base):
+    __tablename__ = "email_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    email_type = Column(String(50), nullable=False)  # survey_reminder_1/2/3, has_likes, welcome, match, custom
+    subject = Column(String(255), nullable=True)
+    sent_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")

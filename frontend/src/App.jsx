@@ -8,6 +8,7 @@ import { CreateGroupPage, JoinGroupPage, GroupDashboardPage, WishlistPage } from
 import ChatPage from './pages/ChatPage'
 import KitPage from './pages/KitPage'
 import AdminPage from './pages/AdminPage'
+import CommunicationPage from './pages/CommunicationPage'
 import ProfilePage from './pages/ProfilePage'
 import NotificationsPage from './pages/NotificationsPage'
 import MyGroupsPage from './pages/MyGroupsPage'
@@ -29,6 +30,7 @@ function App() {
           <Route path="/group/:groupId/chat" element={<ChatPage />} />
           <Route path="/group/:groupId/kit" element={<KitPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/communication" element={<AdminPage initialTab="communication" />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/groups" element={<MyGroupsPage />} />

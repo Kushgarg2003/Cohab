@@ -1,11 +1,14 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { adminAPI, surveyAPI } from '../api'
+import CommunicationPage from './CommunicationPage'
 
 const RESEND_FREE_DAILY_LIMIT = 100
 
-export default function AdminPage() {
+export default function AdminPage({ initialTab = 'users' }) {
   const [secret, setSecret] = useState('')
   const [authed, setAuthed] = useState(false)
+  const [adminTab, setAdminTab] = useState(initialTab)
   const [users, setUsers] = useState([])
   const [total, setTotal] = useState(0)
   const [mutualMatches, setMutualMatches] = useState(0)
@@ -225,9 +228,20 @@ export default function AdminPage() {
     )
   }
 
+  if (adminTab === 'communication') {
+    return (
+      <>
+        <AdminTabBar tab={adminTab} setTab={setAdminTab} />
+        <CommunicationPage secret={secret} />
+      </>
+    )
+  }
+
   return (
     <>
     <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff', padding: '32px 24px' }}>
+      {/* Tab bar */}
+      <AdminTabBar tab={adminTab} setTab={setAdminTab} />
       {/* Header */}
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
@@ -542,6 +556,24 @@ export default function AdminPage() {
       </div>
     )}
     </>
+  )
+}
+
+function AdminTabBar({ tab, setTab }) {
+  return (
+    <div style={{ background: '#0a0a0a', borderBottom: '1px solid #1e1e1e', display: 'flex', paddingLeft: 24 }}>
+      {[['users', 'Users'], ['communication', 'Communication']].map(([key, label]) => (
+        <button key={key} onClick={() => setTab(key)}
+          style={{
+            padding: '14px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            background: 'none', border: 'none',
+            color: tab === key ? '#fff' : '#555',
+            borderBottom: tab === key ? '2px solid #e8481c' : '2px solid transparent',
+          }}>
+          {label}
+        </button>
+      ))}
+    </div>
   )
 }
 
