@@ -288,6 +288,118 @@ def run_email_campaign(payload: dict, db: Session = Depends(get_db), _: None = D
     )
 
 
+@router.get("/stats", response_model=APIResponse)
+def get_admin_stats(db: Session = Depends(get_db), _: None = Depends(verify_admin)):
+    """Aggregated platform stats for the admin dashboard."""
+    from collections import Counter
+    from app.models import EmailLog
+
+    # ── User counts ──────────────────────────────────────────────
+    total_users = db.query(func.count(User.id)).scalar()
+    survey_started = db.query(func.count(SurveyResponse.id)).scalar()
+    survey_completed = db.query(func.count(User.id)).filter(User.survey_completed == True).scalar()
+    verified_users = db.query(func.count(User.id)).filter(User.is_verified == True).scalar()
+
+    # ── Gender split ─────────────────────────────────────────────
+    gender_rows = db.query(User.gender, func.count(User.id)).group_by(User.gender).all()
+    gender_dist = {}
+    for g, cnt in gender_rows:
+        key = g.value if g else "unknown"
+        gender_dist[key] = cnt
+
+    # ── City distribution (from survey locations) ─────────────────
+    surveys = db.query(SurveyResponse).filter(SurveyResponse.locations.isnot(None)).all()
+    city_counter = Counter()
+    for s in surveys:
+        for loc in (s.locations or []):
+            city = loc.split(' - ')[0].strip() if ' - ' in loc else loc.strip()
+            city_counter[city] += 1
+    city_dist = dict(city_counter.most_common(15))
+
+    # ── Budget distribution ───────────────────────────────────────
+    budget_counter = Counter()
+    for s in surveys:
+        for b in (s.budget_ranges or ([s.budget_range.value] if s.budget_range else [])):
+            budget_counter[b] += 1
+    budget_dist = dict(budget_counter.most_common())
+
+    # ── Stay duration distribution ────────────────────────────────
+    duration_rows = db.query(SurveyResponse.stay_duration, func.count(SurveyResponse.id))\
+        .filter(SurveyResponse.stay_duration.isnot(None))\
+        .group_by(SurveyResponse.stay_duration).all()
+    duration_dist = {d: c for d, c in duration_rows}
+
+    # ── Occupancy type distribution ───────────────────────────────
+    occupancy_counter = Counter()
+    for s in surveys:
+        for o in (s.occupancy_types or ([s.occupancy_type.value] if s.occupancy_type else [])):
+            occupancy_counter[o] += 1
+    occupancy_dist = dict(occupancy_counter)
+
+    # ── Swipe stats ───────────────────────────────────────────────
+    total_likes = db.query(func.count(UserSwipe.id)).filter(UserSwipe.action == SwipeAction.LIKE).scalar()
+    total_passes = db.query(func.count(UserSwipe.id)).filter(UserSwipe.action == SwipeAction.PASS).scalar()
+    total_matches = db.query(func.count(MutualMatch.id)).scalar()
+
+    # Users who have at least one mutual match
+    matched_user_ids = set()
+    for m in db.query(MutualMatch).all():
+        matched_user_ids.add(str(m.user_a_id))
+        matched_user_ids.add(str(m.user_b_id))
+    users_with_matches = len(matched_user_ids)
+
+    # ── Top liked users (most likes received) ────────────────────
+    top_liked_rows = db.query(UserSwipe.target_id, func.count(UserSwipe.id).label("likes"))\
+        .filter(UserSwipe.action == SwipeAction.LIKE)\
+        .group_by(UserSwipe.target_id)\
+        .order_by(func.count(UserSwipe.id).desc())\
+        .limit(10).all()
+    top_liked = []
+    for target_id, likes in top_liked_rows:
+        u = db.query(User).filter(User.id == target_id).first()
+        if u:
+            top_liked.append({"user_id": str(u.id), "name": u.name, "email": u.email, "likes": likes})
+
+    # ── Sign-ups over time (last 30 days, grouped by day) ────────
+    from datetime import datetime, timedelta
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    signups_raw = db.query(
+        func.date_trunc('day', User.created_at).label('day'),
+        func.count(User.id).label('count')
+    ).filter(User.created_at >= thirty_days_ago).group_by('day').order_by('day').all()
+    signups_trend = [{"date": r.day.strftime('%Y-%m-%d'), "count": r.count} for r in signups_raw]
+
+    # ── Email stats ───────────────────────────────────────────────
+    emails_sent_total = db.query(func.count(EmailLog.id)).scalar()
+    unsubscribed = db.query(func.count(User.id)).filter(User.email_unsubscribed == True).scalar()
+
+    return APIResponse(
+        status="success",
+        data={
+            "overview": {
+                "total_users": total_users,
+                "survey_started": survey_started,
+                "survey_completed": survey_completed,
+                "verified_users": verified_users,
+                "total_matches": total_matches,
+                "users_with_matches": users_with_matches,
+                "total_likes": total_likes,
+                "total_passes": total_passes,
+                "emails_sent_total": emails_sent_total,
+                "unsubscribed": unsubscribed,
+            },
+            "gender_dist": gender_dist,
+            "city_dist": city_dist,
+            "budget_dist": budget_dist,
+            "duration_dist": duration_dist,
+            "occupancy_dist": occupancy_dist,
+            "top_liked": top_liked,
+            "signups_trend": signups_trend,
+        },
+        message="Stats ready"
+    )
+
+
 @router.delete("/users/{user_id}", response_model=APIResponse)
 def delete_user(user_id: str, db: Session = Depends(get_db), _: None = Depends(verify_admin)):
     """Delete a user and all their data. User can re-join with same Google account."""

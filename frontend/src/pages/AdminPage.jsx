@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { adminAPI, surveyAPI } from '../api'
 import CommunicationPage from './CommunicationPage'
+import StatsPage from './StatsPage'
 
 const RESEND_FREE_DAILY_LIMIT = 100
 
@@ -234,6 +235,15 @@ export default function AdminPage({ initialTab = 'users' }) {
         <AdminTabBar tab={adminTab} setTab={setAdminTab} />
         <CommunicationPage secret={secret} />
       </>
+    )
+  }
+
+  if (adminTab === 'stats') {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff' }}>
+        <AdminTabBar tab={adminTab} setTab={setAdminTab} />
+        <StatsPage secret={secret} />
+      </div>
     )
   }
 
@@ -562,7 +572,7 @@ export default function AdminPage({ initialTab = 'users' }) {
 function AdminTabBar({ tab, setTab }) {
   return (
     <div style={{ background: '#0a0a0a', borderBottom: '1px solid #1e1e1e', display: 'flex', paddingLeft: 24 }}>
-      {[['users', 'Users'], ['communication', 'Communication']].map(([key, label]) => (
+      {[['users', 'Users'], ['stats', 'Stats'], ['communication', 'Communication']].map(([key, label]) => (
         <button key={key} onClick={() => setTab(key)}
           style={{
             padding: '14px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer',

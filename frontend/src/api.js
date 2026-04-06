@@ -278,6 +278,10 @@ export const adminAPI = {
     const response = await api.post('/api/admin/email/campaign', { type, ...extra }, { headers: { 'x-admin-secret': secret } })
     return response.data
   },
+  getStats: async (secret) => {
+    const response = await api.get('/api/admin/stats', { headers: { 'x-admin-secret': secret } })
+    return response.data.data
+  },
 }
 
 export default api
