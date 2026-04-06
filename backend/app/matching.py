@@ -21,6 +21,13 @@ TIMELINE_ADJACENCY = {
     "2-3-months":   {"1-month", "2-3-months"},
 }
 
+DURATION_ADJACENCY = {
+    "1-3 months":  {"1-3 months", "3-6 months"},
+    "3-6 months":  {"1-3 months", "3-6 months", "6-12 months"},
+    "6-12 months": {"3-6 months", "6-12 months", "1 year+"},
+    "1 year+":     {"6-12 months", "1 year+"},
+}
+
 # 0.0 = hard incompatible, 0.5 = tolerable, 1.0 = compatible
 PETS_COMPAT = {
     ("have", "have"):   1.0,
@@ -160,6 +167,14 @@ def compute_match_score(a: SurveyResponse, b: SurveyResponse,
 
     # (Timeline and occupancy are now soft-scored, not hard gates)
 
+    # Gate 3: Duration of stay — hard conflict if no adjacency (both must have answered)
+    dur_a = getattr(a, 'stay_duration', None)
+    dur_b = getattr(b, 'stay_duration', None)
+    if dur_a and dur_b:
+        if dur_b not in DURATION_ADJACENCY.get(dur_a, set()):
+            return {"score": 0, "breakdown": {"disqualified": "duration_mismatch",
+                    "hard_constraints": 0, "dealbreakers": 0, "lifestyle": 0}}
+
     # Gate 5: Dealbreaker hard conflicts (0.0 = instant disqualify)
     pets_c    = _dealbreaker_compat(a.pets,    b.pets,    PETS_COMPAT)
     smoking_c = _dealbreaker_compat(a.smoking, b.smoking, SMOKING_COMPAT)
@@ -224,7 +239,17 @@ def compute_match_score(a: SurveyResponse, b: SurveyResponse,
     else:
         occupancy_pts = 0.0  # no overlap (only-private vs only-twin-sharing)
 
-    # Dealbreaker quality (20 pts) — dynamic denominator: only count fields where
+    # Duration of stay soft score (5 pts) — None = flexible = full score
+    if not dur_a or not dur_b:
+        duration_pts = 5.0   # one or both not set → treat as flexible
+    elif dur_a == dur_b:
+        duration_pts = 5.0   # exact match
+    elif dur_b in DURATION_ADJACENCY.get(dur_a, set()):
+        duration_pts = 3.0   # adjacent (e.g. 3-6 months vs 6-12 months)
+    else:
+        duration_pts = 0.0   # shouldn't reach here (hard gate above), but safe fallback
+
+    # Dealbreaker quality (15 pts) — dynamic denominator: only count fields where
     # at least one user expressed a clear (non-neutral) preference
     eff_pets_a    = _effective_pref("pets",    a.pets)
     eff_pets_b    = _effective_pref("pets",    b.pets)
@@ -243,7 +268,7 @@ def compute_match_score(a: SurveyResponse, b: SurveyResponse,
     if eff_gender_a is not None or eff_gender_b is not None:
         active_sum += gender_c
         active_count += 1
-    dealbreaker_pts = 20.0 if active_count == 0 else round(active_sum / active_count * 20, 2)
+    dealbreaker_pts = 15.0 if active_count == 0 else round(active_sum / active_count * 15, 2)
 
     # Lifestyle similarity (50 pts)
     social_pts = round(_jaccard(a.social_battery, b.social_battery) * 20, 2)
@@ -251,7 +276,7 @@ def compute_match_score(a: SurveyResponse, b: SurveyResponse,
     work_pts   = round(_jaccard(a.work_study,     b.work_study)     * 10, 2)
     lifestyle_pts = round(social_pts + habits_pts + work_pts, 2)
 
-    # Total: location(10) + budget(10) + timeline(5) + occupancy(5) + dealbreakers(20) + lifestyle(50) = 100
+    # Total: location(10) + budget(10) + timeline(5) + occupancy(5) + duration(5) + dealbreakers(15) + lifestyle(50) = 100
     total = round(min(location_pts + budget_pts + timeline_pts + occupancy_pts + dealbreaker_pts + lifestyle_pts, 100), 2)
 
     return {

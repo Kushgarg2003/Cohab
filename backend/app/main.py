@@ -66,6 +66,8 @@ def run_migrations():
         """))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_email_logs_user ON email_logs (user_id)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_email_logs_type ON email_logs (email_type, sent_at)"))
+        # Duration of stay
+        conn.execute(text("ALTER TABLE survey_responses ADD COLUMN IF NOT EXISTS stay_duration VARCHAR(20)"))
         conn.commit()
 
 run_migrations()

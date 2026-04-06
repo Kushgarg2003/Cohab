@@ -35,6 +35,7 @@ class MandatoryDataRequest(BaseModel):
     move_in_timelines: List[str] = Field(default_factory=list)
     occupancy_type: Optional[OccupancyType] = None      # legacy
     occupancy_types: List[str] = Field(default_factory=list)
+    stay_duration: Optional[str] = None  # "1-3 months", "3-6 months", "6-12 months", "1 year+"
 
 class MandatoryDataResponse(BaseModel):
     survey_id: UUID

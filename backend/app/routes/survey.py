@@ -117,6 +117,10 @@ def get_all_questions(db: Session = Depends(get_db)):
             "occupancy_type": {
                 "label": "Are you looking for a private room or shared?",
                 "options": ["private", "twin-sharing"]
+            },
+            "stay_duration": {
+                "label": "How long are you planning to stay?",
+                "options": ["1-3 months", "3-6 months", "6-12 months", "1 year+"]
             }
         },
         "lifestyle_tags": {
@@ -200,6 +204,8 @@ def save_mandatory_data(survey_id: UUID, data: MandatoryDataRequest, db: Session
             survey.move_in_timeline = data.move_in_timelines[0]
         if data.occupancy_types:
             survey.occupancy_type = data.occupancy_types[0]
+        if data.stay_duration:
+            survey.stay_duration = data.stay_duration
         survey.updated_at = datetime.utcnow()
 
         db.commit()
@@ -213,6 +219,7 @@ def save_mandatory_data(survey_id: UUID, data: MandatoryDataRequest, db: Session
                 "locations": survey.locations,
                 "move_in_timeline": survey.move_in_timeline,
                 "occupancy_type": survey.occupancy_type,
+                "stay_duration": survey.stay_duration,
                 "updated_at": survey.updated_at.isoformat()
             },
             message="Mandatory data saved successfully"
@@ -341,6 +348,7 @@ def preview_survey(survey_id: UUID, db: Session = Depends(get_db)):
         "social_battery": survey.social_battery or [],
         "habits": survey.habits or [],
         "work_study": survey.work_study or [],
+        "stay_duration": survey.stay_duration,
         "pets": survey.pets,
         "smoking": survey.smoking,
         "dietary": survey.dietary,

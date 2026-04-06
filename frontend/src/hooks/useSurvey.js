@@ -12,6 +12,7 @@ const useSurvey = create((set, get) => ({
     locations: [],
     move_in_timelines: [],
     occupancy_types: [],
+    stay_duration: null,
   },
 
   lifestyleTags: {
@@ -85,6 +86,7 @@ const useSurvey = create((set, get) => ({
       locations: [],
       move_in_timelines: [],
       occupancy_types: [],
+      stay_duration: null,
     },
     lifestyleTags: {
       social_battery: [],

@@ -20,6 +20,7 @@ export default function SurveyCard({ questions, onNext, onBack }) {
     { key: 'locations',         label: questions?.locations?.label,        options: questions?.locations?.options,        isMulti: true },
     { key: 'move_in_timelines', label: questions?.move_in_timeline?.label, options: questions?.move_in_timeline?.options, isSimpleMulti: true },
     { key: 'occupancy_types',   label: questions?.occupancy_type?.label,   options: questions?.occupancy_type?.options,   isSimpleMulti: true },
+    { key: 'stay_duration',     label: questions?.stay_duration?.label,    options: questions?.stay_duration?.options,    isSingle: true },
   ]
 
   const currentField = fields[step]
@@ -35,6 +36,7 @@ export default function SurveyCard({ questions, onNext, onBack }) {
       const updated = current.includes(value) ? current.filter(r => r !== value) : [...current, value]
       setMandatoryData({ [currentField.key]: updated })
     } else {
+      // isSingle: toggle off if same value selected again
       setMandatoryData({ [currentField.key]: mandatoryData[currentField.key] === value ? null : value })
     }
   }
@@ -55,6 +57,7 @@ export default function SurveyCard({ questions, onNext, onBack }) {
       return selectedCity !== null && mandatoryData.locations.length > 0
     }
     if (currentField.isSimpleMulti) return (mandatoryData[currentField.key] || []).length > 0
+    if (currentField.isSingle) return mandatoryData[currentField.key] !== null
     return mandatoryData[currentField.key] !== null
   }
 

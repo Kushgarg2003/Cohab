@@ -144,6 +144,7 @@ function SwipeCard({ person, isTop }) {
           {snap.locations?.length > 0 && <Row icon="📍" label="Areas" value={snap.locations.join(', ')} />}
           {snap.move_in_timeline && <Row icon="📅" label="Move-in" value={snap.move_in_timeline} />}
           {snap.occupancy_type && <Row icon="🏠" label="Room" value={snap.occupancy_type} />}
+          {snap.stay_duration && <Row icon="🗓️" label="Stay" value={snap.stay_duration} />}
         </div>
 
         {/* Tags */}
@@ -492,6 +493,7 @@ export default function MatchesPage() {
                       {snap.budget_range && <Row icon="💰" label="Budget" value={snap.budget_range} />}
                       {snap.locations?.length > 0 && <Row icon="📍" label="Areas" value={snap.locations.join(', ')} />}
                       {snap.move_in_timeline && <Row icon="📅" label="Move-in" value={snap.move_in_timeline} />}
+                      {snap.stay_duration && <Row icon="🗓️" label="Stay" value={snap.stay_duration} />}
                     </div>
                     {tags.length > 0 && (
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

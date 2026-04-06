@@ -102,6 +102,9 @@ class SurveyResponse(Base):
     dietary = Column(SQLEnum(DietaryPreference), nullable=True)
     gender = Column(SQLEnum(GenderPreference), nullable=True)
 
+    # Duration of stay
+    stay_duration = Column(String(20), nullable=True)  # "1-3 months", "3-6 months", "6-12 months", "1 year+"
+
     # Deep dive open-ended responses
     deep_dive_responses = Column(JSON, nullable=True, default=dict)
 
