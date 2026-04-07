@@ -292,7 +292,8 @@ def run_email_campaign(payload: dict, db: Session = Depends(get_db), _: None = D
 def get_admin_stats(db: Session = Depends(get_db), _: None = Depends(verify_admin)):
     """Aggregated platform stats for the admin dashboard."""
     from collections import Counter
-    from app.models import EmailLog
+    from app.models import EmailLog, Message
+    from datetime import datetime, timedelta
 
     # ── User counts ──────────────────────────────────────────────
     total_users = db.query(func.count(User.id)).scalar()
@@ -300,21 +301,47 @@ def get_admin_stats(db: Session = Depends(get_db), _: None = Depends(verify_admi
     survey_completed = db.query(func.count(User.id)).filter(User.survey_completed == True).scalar()
     verified_users = db.query(func.count(User.id)).filter(User.is_verified == True).scalar()
 
+    # Active users: swiped in last 7 days
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    active_user_ids = {s.swiper_id for s in db.query(UserSwipe.swiper_id).filter(
+        UserSwipe.created_at >= seven_days_ago).all()}
+    active_users_7d = len(active_user_ids)
+
+    # Dead accounts: completed survey, never swiped
+    all_swipers = {s.swiper_id for s in db.query(UserSwipe.swiper_id).distinct().all()}
+    completed_ids = {u.id for u in db.query(User).filter(User.survey_completed == True).all()}
+    never_swiped = len(completed_ids - all_swipers)
+
     # ── Gender split ─────────────────────────────────────────────
     gender_rows = db.query(User.gender, func.count(User.id)).group_by(User.gender).all()
-    gender_dist = {}
-    for g, cnt in gender_rows:
-        key = g.value if g else "unknown"
-        gender_dist[key] = cnt
+    gender_dist = {(g.value if g else "unknown"): cnt for g, cnt in gender_rows}
 
-    # ── City distribution (from survey locations) ─────────────────
+    # ── Age distribution ─────────────────────────────────────────
+    users_with_dob = db.query(User).filter(User.date_of_birth.isnot(None)).all()
+    age_counter = Counter()
+    today = datetime.utcnow().date()
+    for u in users_with_dob:
+        age = (today - u.date_of_birth).days // 365
+        bucket = "18-22" if age <= 22 else "23-26" if age <= 26 else "27-30" if age <= 30 else "31+"
+        age_counter[bucket] += 1
+    age_dist = dict(age_counter)
+
+    # ── Location distributions ────────────────────────────────────
     surveys = db.query(SurveyResponse).filter(SurveyResponse.locations.isnot(None)).all()
     city_counter = Counter()
+    area_counter = Counter()
     for s in surveys:
         for loc in (s.locations or []):
-            city = loc.split(' - ')[0].strip() if ' - ' in loc else loc.strip()
-            city_counter[city] += 1
-    city_dist = dict(city_counter.most_common(15))
+            loc = loc.strip()
+            if ' - ' in loc:
+                city, area = loc.split(' - ', 1)
+                city_counter[city.strip()] += 1
+                area_counter[loc] += 1   # full "City - Area"
+            else:
+                city_counter[loc] += 1
+                area_counter[loc] += 1
+    city_dist = dict(city_counter.most_common(20))
+    area_dist = dict(area_counter.most_common(30))
 
     # ── Budget distribution ───────────────────────────────────────
     budget_counter = Counter()
@@ -336,17 +363,79 @@ def get_admin_stats(db: Session = Depends(get_db), _: None = Depends(verify_admi
             occupancy_counter[o] += 1
     occupancy_dist = dict(occupancy_counter)
 
+    # ── Dealbreaker distributions ─────────────────────────────────
+    all_surveys = db.query(SurveyResponse).all()
+    pets_counter = Counter()
+    smoking_counter = Counter()
+    dietary_counter = Counter()
+    lifestyle_counter = Counter()
+    for s in all_surveys:
+        if s.pets: pets_counter[s.pets.value] += 1
+        if s.smoking: smoking_counter[s.smoking] += 1
+        if s.dietary: dietary_counter[s.dietary.value] += 1
+        for tag in (s.social_battery or []) + (s.habits or []) + (s.work_study or []):
+            lifestyle_counter[tag] += 1
+    pets_dist = dict(pets_counter)
+    smoking_dist = dict(smoking_counter)
+    dietary_dist = dict(dietary_counter)
+    lifestyle_dist = dict(lifestyle_counter.most_common(15))
+
     # ── Swipe stats ───────────────────────────────────────────────
     total_likes = db.query(func.count(UserSwipe.id)).filter(UserSwipe.action == SwipeAction.LIKE).scalar()
     total_passes = db.query(func.count(UserSwipe.id)).filter(UserSwipe.action == SwipeAction.PASS).scalar()
     total_matches = db.query(func.count(MutualMatch.id)).scalar()
+    like_ratio = round(total_likes / (total_likes + total_passes) * 100, 1) if (total_likes + total_passes) else 0
 
-    # Users who have at least one mutual match
+    # Match reciprocity: mutual matches / total likes
+    reciprocity = round(total_matches / total_likes * 100, 1) if total_likes else 0
+
+    # Users with at least one mutual match
     matched_user_ids = set()
     for m in db.query(MutualMatch).all():
         matched_user_ids.add(str(m.user_a_id))
         matched_user_ids.add(str(m.user_b_id))
     users_with_matches = len(matched_user_ids)
+
+    # ── All matched pairs ─────────────────────────────────────────
+    all_matches = db.query(MutualMatch).order_by(MutualMatch.matched_at.desc()).all()
+    matched_pairs = []
+    msg_counts = {}
+    if all_matches:
+        group_ids = [m.group_id for m in all_matches if m.group_id]
+        if group_ids:
+            msg_rows = db.query(Message.group_id, func.count(Message.id).label('cnt'))\
+                .filter(Message.group_id.in_(group_ids)).group_by(Message.group_id).all()
+            msg_counts = {str(r.group_id): r.cnt for r in msg_rows}
+
+    scores_map = {}
+    for ms in db.query(MatchScore).all():
+        scores_map[(str(ms.user_a_id), str(ms.user_b_id))] = ms.score
+
+    for m in all_matches:
+        ua = db.query(User).filter(User.id == m.user_a_id).first()
+        ub = db.query(User).filter(User.id == m.user_b_id).first()
+        a_id, b_id = sorted([str(m.user_a_id), str(m.user_b_id)])
+        score = scores_map.get((a_id, b_id)) or scores_map.get((b_id, a_id))
+        gid = str(m.group_id) if m.group_id else None
+        matched_pairs.append({
+            "match_id": str(m.id),
+            "user_a": {"id": str(m.user_a_id), "name": ua.name if ua else None, "email": ua.email if ua else None, "gender": ua.gender.value if ua and ua.gender else None},
+            "user_b": {"id": str(m.user_b_id), "name": ub.name if ub else None, "email": ub.email if ub else None, "gender": ub.gender.value if ub and ub.gender else None},
+            "score": round(score, 1) if score else None,
+            "group_id": gid,
+            "messages": msg_counts.get(gid, 0),
+            "matched_at": m.matched_at.strftime('%Y-%m-%d %H:%M') if m.matched_at else None,
+        })
+
+    # ── Match score distribution ──────────────────────────────────
+    score_buckets = {"0-20": 0, "21-40": 0, "41-60": 0, "61-80": 0, "81-100": 0}
+    for ms in db.query(MatchScore).all():
+        s = ms.score
+        if s <= 20: score_buckets["0-20"] += 1
+        elif s <= 40: score_buckets["21-40"] += 1
+        elif s <= 60: score_buckets["41-60"] += 1
+        elif s <= 80: score_buckets["61-80"] += 1
+        else: score_buckets["81-100"] += 1
 
     # ── Top liked users (most likes received) ────────────────────
     top_liked_rows = db.query(UserSwipe.target_id, func.count(UserSwipe.id).label("likes"))\
@@ -358,10 +447,9 @@ def get_admin_stats(db: Session = Depends(get_db), _: None = Depends(verify_admi
     for target_id, likes in top_liked_rows:
         u = db.query(User).filter(User.id == target_id).first()
         if u:
-            top_liked.append({"user_id": str(u.id), "name": u.name, "email": u.email, "likes": likes})
+            top_liked.append({"user_id": str(u.id), "name": u.name, "email": u.email, "gender": u.gender.value if u.gender else None, "likes": likes})
 
-    # ── Sign-ups over time (last 30 days, grouped by day) ────────
-    from datetime import datetime, timedelta
+    # ── Sign-ups over time (last 30 days) ────────────────────────
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
     signups_raw = db.query(
         func.date_trunc('day', User.created_at).label('day'),
@@ -372,6 +460,9 @@ def get_admin_stats(db: Session = Depends(get_db), _: None = Depends(verify_admi
     # ── Email stats ───────────────────────────────────────────────
     emails_sent_total = db.query(func.count(EmailLog.id)).scalar()
     unsubscribed = db.query(func.count(User.id)).filter(User.email_unsubscribed == True).scalar()
+    email_type_rows = db.query(EmailLog.email_type, func.count(EmailLog.id))\
+        .group_by(EmailLog.email_type).all()
+    email_type_dist = {t: c for t, c in email_type_rows}
 
     return APIResponse(
         status="success",
@@ -385,15 +476,28 @@ def get_admin_stats(db: Session = Depends(get_db), _: None = Depends(verify_admi
                 "users_with_matches": users_with_matches,
                 "total_likes": total_likes,
                 "total_passes": total_passes,
+                "like_ratio": like_ratio,
+                "reciprocity_rate": reciprocity,
+                "active_users_7d": active_users_7d,
+                "never_swiped": never_swiped,
                 "emails_sent_total": emails_sent_total,
                 "unsubscribed": unsubscribed,
             },
             "gender_dist": gender_dist,
+            "age_dist": age_dist,
             "city_dist": city_dist,
+            "area_dist": area_dist,
             "budget_dist": budget_dist,
             "duration_dist": duration_dist,
             "occupancy_dist": occupancy_dist,
+            "pets_dist": pets_dist,
+            "smoking_dist": smoking_dist,
+            "dietary_dist": dietary_dist,
+            "lifestyle_dist": lifestyle_dist,
+            "score_dist": score_buckets,
+            "email_type_dist": email_type_dist,
             "top_liked": top_liked,
+            "matched_pairs": matched_pairs,
             "signups_trend": signups_trend,
         },
         message="Stats ready"
