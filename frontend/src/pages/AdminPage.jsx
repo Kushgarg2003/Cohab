@@ -18,6 +18,8 @@ export default function AdminPage({ initialTab = 'users' }) {
   const [deletingId, setDeletingId] = useState(null)
   const [flushing, setFlushing] = useState(false)
   const [search, setSearch] = useState('')
+  const [filterGender, setFilterGender] = useState('') // 'male'|'female'|'other'|''
+  const [filterSurvey, setFilterSurvey] = useState('') // 'done'|'pending'|''
   const [profileModal, setProfileModal] = useState(null) // { user, survey }
   const [loadingProfile, setLoadingProfile] = useState(null)
   const [verifyingId, setVerifyingId] = useState(null)
@@ -198,10 +200,19 @@ export default function AdminPage({ initialTab = 'users' }) {
     }
   }
 
-  const filtered = users.filter(u =>
-    u.name?.toLowerCase().includes(search.toLowerCase()) ||
-    u.email?.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = users.filter(u => {
+    const q = search.toLowerCase()
+    const locations = u.survey?.locations || []
+    const matchesSearch = !q ||
+      u.name?.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q) ||
+      locations.some(l => l.toLowerCase().includes(q))
+    const matchesGender = !filterGender || u.gender === filterGender
+    const matchesSurvey = !filterSurvey ||
+      (filterSurvey === 'done' && u.survey_completed) ||
+      (filterSurvey === 'pending' && !u.survey_completed)
+    return matchesSearch && matchesGender && matchesSurvey
+  })
 
   if (!authed) {
     return (
@@ -268,12 +279,36 @@ export default function AdminPage({ initialTab = 'users' }) {
           >
             {flushing ? 'Flushing…' : 'Flush Match Scores'}
           </button>
-          <input
-            placeholder="Search by name or email…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ background: '#111', border: '1px solid #222', borderRadius: 8, padding: '9px 14px', color: '#fff', fontSize: 14, width: 260, outline: 'none' }}
-          />
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <input
+              placeholder="Search name, email or city…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ background: '#111', border: '1px solid #222', borderRadius: 8, padding: '9px 14px', color: '#fff', fontSize: 14, width: 240, outline: 'none' }}
+            />
+            {/* Gender filter */}
+            <select value={filterGender} onChange={e => setFilterGender(e.target.value)}
+              style={{ background: '#111', border: '1px solid #222', borderRadius: 8, padding: '9px 12px', color: filterGender ? '#fff' : '#555', fontSize: 13, outline: 'none', cursor: 'pointer' }}>
+              <option value="">All genders</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+            {/* Survey filter */}
+            <select value={filterSurvey} onChange={e => setFilterSurvey(e.target.value)}
+              style={{ background: '#111', border: '1px solid #222', borderRadius: 8, padding: '9px 12px', color: filterSurvey ? '#fff' : '#555', fontSize: 13, outline: 'none', cursor: 'pointer' }}>
+              <option value="">All users</option>
+              <option value="done">Survey done</option>
+              <option value="pending">No survey</option>
+            </select>
+            {/* Active filter indicator */}
+            {(search || filterGender || filterSurvey) && (
+              <button onClick={() => { setSearch(''); setFilterGender(''); setFilterSurvey('') }}
+                style={{ background: 'rgba(232,72,28,0.1)', border: '1px solid rgba(232,72,28,0.3)', color: '#e8481c', borderRadius: 8, padding: '8px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                Clear · {filtered.length} shown
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Stats row */}
@@ -397,7 +432,14 @@ export default function AdminPage({ initialTab = 'users' }) {
                         ? <img src={user.picture} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
                         : <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#222', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#555' }}>{user.name?.[0] || '?'}</div>
                       }
-                      <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{user.name || '—'}</span>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{user.name || '—'}</div>
+                        {user.survey?.locations?.length > 0 && (
+                          <div style={{ fontSize: 11, color: '#555', marginTop: 1 }}>
+                            📍 {user.survey.locations.map(l => l.split(' - ')[0]).filter((c, i, a) => a.indexOf(c) === i).join(', ')}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </td>
                   {/* Email */}
