@@ -228,14 +228,28 @@ def record_swipe(user_id: UUID, payload: dict, db: Session = Depends(get_db)):
                 mutual = True
                 group_id = str(new_group.id)
 
-                # Email both matched users — fire and forget in background thread
+                # Email both matched users — capture primitives, open fresh db in thread
                 from app.email_service import send_match_email
                 import threading
-                def _send_match_emails():
-                    if user_a.email:
-                        send_match_email(user_a.email, user_a.name or "", user_b.name or "Your match", group_id)
-                    if user_b.email:
-                        send_match_email(user_b.email, user_b.name or "", user_a.name or "Your match", group_id)
+                _a_email, _a_name, _b_email, _b_name, _gid = (
+                    user_a.email, user_a.name or "", user_b.email, user_b.name or "", group_id
+                )
+                _a_id, _b_id = user_a.id, user_b.id
+                def _send_match_emails(a_email=_a_email, a_name=_a_name, b_email=_b_email,
+                                       b_name=_b_name, gid=_gid, a_id=_a_id, b_id=_b_id):
+                    from app.database import SessionLocal
+                    thread_db = SessionLocal()
+                    try:
+                        ua = thread_db.query(User).filter(User.id == a_id).first()
+                        ub = thread_db.query(User).filter(User.id == b_id).first()
+                        if a_email:
+                            send_match_email(a_email, a_name, b_name or "Your match", gid, user=ua, db=thread_db)
+                        if b_email:
+                            send_match_email(b_email, b_name, a_name or "Your match", gid, user=ub, db=thread_db)
+                    except Exception as e:
+                        print(f"[email] Match email failed: {e}")
+                    finally:
+                        thread_db.close()
                 threading.Thread(target=_send_match_emails, daemon=True).start()
 
     # Auto-trigger "someone liked you" email for the target (non-blocking)
@@ -249,11 +263,22 @@ def record_swipe(user_id: UUID, payload: dict, db: Session = Depends(get_db)):
             like_count = db.query(_US).filter(
                 _US.target_id == target_id, _US.action == _SA.LIKE
             ).count()
-            def _send_likes_email():
-                send_you_have_likes_email(
-                    target_user.email, target_user.name or "there",
-                    like_count, user=target_user, db=db
-                )
+            # Capture primitives — do NOT pass the request db session into the thread
+            # (the session is closed when the request ends, causing silent failures)
+            _email = target_user.email
+            _name = target_user.name or "there"
+            _user_id = target_user.id
+            _count = like_count
+            def _send_likes_email(email=_email, name=_name, user_id=_user_id, count=_count):
+                from app.database import SessionLocal
+                thread_db = SessionLocal()
+                try:
+                    thread_user = thread_db.query(User).filter(User.id == user_id).first()
+                    send_you_have_likes_email(email, name, count, user=thread_user, db=thread_db)
+                except Exception as e:
+                    print(f"[email] Auto-trigger likes email failed: {e}")
+                finally:
+                    thread_db.close()
             threading.Thread(target=_send_likes_email, daemon=True).start()
 
     return APIResponse(
