@@ -197,6 +197,26 @@ def send_custom_broadcast_email(to_email: str, name: str, subject: str, body_htm
     return ok
 
 
+def send_conversation_nudge_email(to_email: str, name: str, match_name: str, group_id: str, user=None, db=None) -> bool:
+    first_name = name.split()[0] if name else "there"
+    match_first = match_name.split()[0] if match_name else "your match"
+    group_url = f"{APP_URL}/group/{group_id}"
+    unsub_url = f"{APP_URL}/unsubscribe/{get_or_create_unsubscribe_token(user, db)}" if user and db else None
+    content = f"""
+      <h2>Hey {first_name}, {match_first} is waiting 👋</h2>
+      <p>You matched with <strong style="color:#fff;">{match_name}</strong> on Colocsy a few days ago — but nobody's said hi yet.</p>
+      <p>Great roommate situations don't wait forever. A quick message now could be the start of finding a place you actually love.</p>
+      <a href="{group_url}" class="cta">Break the ice →</a>
+      <div class="divider"></div>
+      <p style="font-size:13px;">It only takes one message. You already matched — the hard part is done.</p>
+    """
+    subject = f"You matched with {match_name} — nobody's said hi yet"
+    ok = _send(to_email, subject, _base_template(content, unsub_url))
+    if ok and user and db:
+        log_email(user.id, "conversation_nudge", subject, db)
+    return ok
+
+
 def send_match_email(to_email: str, your_name: str, match_name: str, group_id: str, user=None, db=None) -> bool:
     first_name = your_name.split()[0] if your_name else "there"
     match_first = match_name.split()[0] if match_name else "someone"
