@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.database import engine, Base, settings
 from app.routes import survey, users, matching, groups, auth, admin, swipes, chat, kit, communication
+from app.routes import broker_auth, broker_listings, broker_inquiries, listings, inquiries
 from app.models import LifestyleTag, LifestyleCategory
 
 # Initialize database tables
@@ -68,6 +69,116 @@ def run_migrations():
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_email_logs_type ON email_logs (email_type, sent_at)"))
         # Duration of stay
         conn.execute(text("ALTER TABLE survey_responses ADD COLUMN IF NOT EXISTS stay_duration VARCHAR(20)"))
+
+        # Broker listings
+        conn.execute(text("""
+            DO $$ BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'brokerstatus') THEN
+                    CREATE TYPE brokerstatus AS ENUM ('pending', 'approved', 'suspended');
+                END IF;
+            END$$;
+        """))
+        conn.execute(text("""
+            DO $$ BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'listingstatus') THEN
+                    CREATE TYPE listingstatus AS ENUM ('draft', 'pending_review', 'live', 'paused', 'archived');
+                END IF;
+            END$$;
+        """))
+        conn.execute(text("""
+            DO $$ BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'propertytype') THEN
+                    CREATE TYPE propertytype AS ENUM ('pg', 'flat', 'room_in_flat');
+                END IF;
+            END$$;
+        """))
+        conn.execute(text("""
+            DO $$ BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'furnishingtype') THEN
+                    CREATE TYPE furnishingtype AS ENUM ('fully_furnished', 'semi_furnished', 'unfurnished');
+                END IF;
+            END$$;
+        """))
+        conn.execute(text("""
+            DO $$ BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'inquirystatus') THEN
+                    CREATE TYPE inquirystatus AS ENUM ('open', 'closed');
+                END IF;
+            END$$;
+        """))
+        conn.execute(text("""
+            DO $$ BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'inquirymessagesender') THEN
+                    CREATE TYPE inquirymessagesender AS ENUM ('user', 'broker');
+                END IF;
+            END$$;
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS brokers (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                email VARCHAR(255) UNIQUE NOT NULL,
+                hashed_password VARCHAR(255) NOT NULL,
+                display_name VARCHAR(100) NOT NULL,
+                phone VARCHAR(20),
+                city VARCHAR(100),
+                status brokerstatus NOT NULL DEFAULT 'pending',
+                admin_note VARCHAR(500),
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS listings (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                broker_id UUID NOT NULL REFERENCES brokers(id) ON DELETE CASCADE,
+                title VARCHAR(255) NOT NULL,
+                description VARCHAR(3000),
+                property_type propertytype NOT NULL,
+                furnishing furnishingtype,
+                city VARCHAR(100) NOT NULL,
+                locality VARCHAR(255) NOT NULL,
+                full_address VARCHAR(500),
+                monthly_rent INTEGER NOT NULL,
+                deposit INTEGER,
+                maintenance INTEGER,
+                total_beds INTEGER,
+                available_beds INTEGER,
+                gender_preference genderpreference,
+                amenities JSONB,
+                rules JSONB,
+                photos JSONB,
+                status listingstatus NOT NULL DEFAULT 'draft',
+                admin_note VARCHAR(500),
+                available_from DATE,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS listing_inquiries (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                listing_id UUID NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                status inquirystatus NOT NULL DEFAULT 'open',
+                created_at TIMESTAMP DEFAULT NOW(),
+                UNIQUE (listing_id, user_id)
+            )
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS inquiry_messages (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                inquiry_id UUID NOT NULL REFERENCES listing_inquiries(id) ON DELETE CASCADE,
+                sender_role inquirymessagesender NOT NULL,
+                sender_id UUID NOT NULL,
+                content VARCHAR(3000) NOT NULL,
+                flagged BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_listings_status ON listings (status)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_listings_city ON listings (city)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_listing_inquiries_user ON listing_inquiries (user_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS idx_inquiry_messages_inquiry ON inquiry_messages (inquiry_id)"))
         conn.commit()
 
 run_migrations()
@@ -190,6 +301,11 @@ app.include_router(swipes.router)
 app.include_router(chat.router)
 app.include_router(kit.router)
 app.include_router(communication.router)
+app.include_router(broker_auth.router)
+app.include_router(broker_listings.router)
+app.include_router(broker_inquiries.router)
+app.include_router(listings.router)
+app.include_router(inquiries.router)
 
 # Health check
 @app.get("/health")

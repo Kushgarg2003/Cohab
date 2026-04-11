@@ -249,6 +249,109 @@ export const chatAPI = {
   }
 }
 
+// Broker portal — uses broker_token stored separately from user token
+const brokerApi = axios.create({ baseURL: API_URL, headers: { 'Content-Type': 'application/json' } })
+brokerApi.interceptors.request.use(config => {
+  const token = localStorage.getItem('broker_token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+export const brokerAuthAPI = {
+  register: async (payload) => {
+    const res = await brokerApi.post('/api/broker/auth/register', payload)
+    return res.data.data
+  },
+  login: async (email, password) => {
+    const res = await brokerApi.post('/api/broker/auth/login', { email, password })
+    return res.data.data
+  },
+  getMe: async () => {
+    const res = await brokerApi.get('/api/broker/auth/me')
+    return res.data.data
+  },
+}
+
+export const brokerListingsAPI = {
+  list: async () => {
+    const res = await brokerApi.get('/api/broker/listings')
+    return res.data.data
+  },
+  get: async (id) => {
+    const res = await brokerApi.get(`/api/broker/listings/${id}`)
+    return res.data.data
+  },
+  create: async (payload) => {
+    const res = await brokerApi.post('/api/broker/listings', payload)
+    return res.data.data
+  },
+  update: async (id, payload) => {
+    const res = await brokerApi.patch(`/api/broker/listings/${id}`, payload)
+    return res.data.data
+  },
+  submit: async (id) => {
+    const res = await brokerApi.post(`/api/broker/listings/${id}/submit`)
+    return res.data.data
+  },
+  pause: async (id) => {
+    const res = await brokerApi.post(`/api/broker/listings/${id}/pause`)
+    return res.data.data
+  },
+  delete: async (id) => {
+    const res = await brokerApi.delete(`/api/broker/listings/${id}`)
+    return res.data.data
+  },
+}
+
+export const brokerInquiriesAPI = {
+  list: async () => {
+    const res = await brokerApi.get('/api/broker/inquiries')
+    return res.data.data
+  },
+  getMessages: async (inquiryId) => {
+    const res = await brokerApi.get(`/api/broker/inquiries/${inquiryId}/messages`)
+    return res.data.data
+  },
+  sendMessage: async (inquiryId, content) => {
+    const res = await brokerApi.post(`/api/broker/inquiries/${inquiryId}/messages`, { content })
+    return res.data.data
+  },
+  close: async (inquiryId) => {
+    const res = await brokerApi.patch(`/api/broker/inquiries/${inquiryId}`)
+    return res.data.data
+  },
+}
+
+export const listingsAPI = {
+  browse: async (filters = {}) => {
+    const res = await api.get('/api/listings', { params: filters })
+    return res.data.data
+  },
+  get: async (id) => {
+    const res = await api.get(`/api/listings/${id}`)
+    return res.data.data
+  },
+  inquire: async (listingId, message) => {
+    const res = await api.post(`/api/listings/${listingId}/inquire`, { message })
+    return res.data.data
+  },
+  myInquiries: async () => {
+    const res = await api.get('/api/listings/my-inquiries')
+    return res.data.data
+  },
+}
+
+export const inquiriesAPI = {
+  getMessages: async (inquiryId) => {
+    const res = await api.get(`/api/inquiries/${inquiryId}/messages`)
+    return res.data.data
+  },
+  sendMessage: async (inquiryId, content) => {
+    const res = await api.post(`/api/inquiries/${inquiryId}/messages`, { content })
+    return res.data.data
+  },
+}
+
 export const adminAPI = {
   getUsers: async (secret) => {
     const response = await api.get('/api/admin/users', { headers: { 'x-admin-secret': secret } })
@@ -281,6 +384,31 @@ export const adminAPI = {
   getStats: async (secret) => {
     const response = await api.get('/api/admin/stats', { headers: { 'x-admin-secret': secret } })
     return response.data.data
+  },
+  getBrokers: async (secret, status = null) => {
+    const params = status ? { status } : {}
+    const response = await api.get('/api/admin/brokers', { headers: { 'x-admin-secret': secret }, params })
+    return response.data.data
+  },
+  approveBroker: async (brokerId, secret) => {
+    const response = await api.patch(`/api/admin/brokers/${brokerId}/approve`, {}, { headers: { 'x-admin-secret': secret } })
+    return response.data
+  },
+  suspendBroker: async (brokerId, note, secret) => {
+    const response = await api.patch(`/api/admin/brokers/${brokerId}/suspend`, { note }, { headers: { 'x-admin-secret': secret } })
+    return response.data
+  },
+  getPendingListings: async (secret) => {
+    const response = await api.get('/api/admin/listings/pending', { headers: { 'x-admin-secret': secret } })
+    return response.data.data
+  },
+  approveListing: async (listingId, secret) => {
+    const response = await api.patch(`/api/admin/listings/${listingId}/approve`, {}, { headers: { 'x-admin-secret': secret } })
+    return response.data
+  },
+  rejectListing: async (listingId, note, secret) => {
+    const response = await api.patch(`/api/admin/listings/${listingId}/reject`, { note }, { headers: { 'x-admin-secret': secret } })
+    return response.data
   },
 }
 

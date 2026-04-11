@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { adminAPI, surveyAPI } from '../api'
 import CommunicationPage from './CommunicationPage'
@@ -254,6 +254,24 @@ export default function AdminPage({ initialTab = 'users' }) {
       <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff' }}>
         <AdminTabBar tab={adminTab} setTab={setAdminTab} />
         <StatsPage secret={secret} />
+      </div>
+    )
+  }
+
+  if (adminTab === 'brokers') {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff' }}>
+        <AdminTabBar tab={adminTab} setTab={setAdminTab} />
+        <BrokersTab secret={secret} />
+      </div>
+    )
+  }
+
+  if (adminTab === 'listings') {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff' }}>
+        <AdminTabBar tab={adminTab} setTab={setAdminTab} />
+        <ListingsReviewTab secret={secret} />
       </div>
     )
   }
@@ -614,7 +632,7 @@ export default function AdminPage({ initialTab = 'users' }) {
 function AdminTabBar({ tab, setTab }) {
   return (
     <div style={{ background: '#0a0a0a', borderBottom: '1px solid #1e1e1e', display: 'flex', paddingLeft: 24 }}>
-      {[['users', 'Users'], ['stats', 'Stats'], ['communication', 'Communication']].map(([key, label]) => (
+      {[['users', 'Users'], ['stats', 'Stats'], ['communication', 'Communication'], ['brokers', 'Brokers'], ['listings', 'Listings']].map(([key, label]) => (
         <button key={key} onClick={() => setTab(key)}
           style={{
             padding: '14px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
@@ -753,3 +771,212 @@ function TagRow({ label, tags }) {
     </div>
   )
 }
+
+// ---------------------------------------------------------------------------
+// Brokers Tab
+// ---------------------------------------------------------------------------
+function BrokersTab({ secret }) {
+  const [brokers, setBrokers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [actionId, setActionId] = useState(null)
+
+  const load = () => {
+    setLoading(true)
+    adminAPI.getBrokers(secret)
+      .then(d => setBrokers(d.brokers || []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, [])
+
+  const approve = async (id) => {
+    setActionId(id)
+    try { await adminAPI.approveBroker(id, secret); load() }
+    catch (e) { alert(e.response?.data?.detail || 'Error') }
+    finally { setActionId(null) }
+  }
+
+  const suspend = async (id, name) => {
+    const note = prompt(`Reason for suspending ${name}?`)
+    if (note === null) return
+    setActionId(id)
+    try { await adminAPI.suspendBroker(id, note, secret); load() }
+    catch (e) { alert(e.response?.data?.detail || 'Error') }
+    finally { setActionId(null) }
+  }
+
+  const STATUS_COLORS = { pending: '#f59e0b', approved: '#22c55e', suspended: '#f44' }
+
+  return (
+    <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 20px' }}>
+      <h2 style={{ margin: '0 0 20px', color: '#fff' }}>Broker Accounts ({brokers.length})</h2>
+      {loading ? <p style={{ color: '#888' }}>Loading…</p> : (
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid #2a2a2a', color: '#666', textAlign: 'left' }}>
+              {['Name', 'Email', 'Phone', 'City', 'Status', 'Listings', 'Joined', 'Actions'].map(h => (
+                <th key={h} style={{ padding: '8px 10px', fontWeight: 600 }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {brokers.map(b => (
+              <tr key={b.id} style={{ borderBottom: '1px solid #1a1a1a' }}>
+                <td style={{ padding: '10px', color: '#fff' }}>{b.display_name}</td>
+                <td style={{ padding: '10px', color: '#aaa' }}>{b.email}</td>
+                <td style={{ padding: '10px', color: '#aaa' }}>{b.phone || '—'}</td>
+                <td style={{ padding: '10px', color: '#aaa' }}>{b.city || '—'}</td>
+                <td style={{ padding: '10px' }}>
+                  <span style={{ color: STATUS_COLORS[b.status] || '#888', fontWeight: 600 }}>
+                    {b.status}
+                  </span>
+                </td>
+                <td style={{ padding: '10px', color: '#aaa' }}>{b.listing_count}</td>
+                <td style={{ padding: '10px', color: '#666' }}>{new Date(b.created_at).toLocaleDateString()}</td>
+                <td style={{ padding: '10px' }}>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {b.status !== 'approved' && (
+                      <button
+                        onClick={() => approve(b.id)}
+                        disabled={actionId === b.id}
+                        style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}
+                      >
+                        Approve
+                      </button>
+                    )}
+                    {b.status !== 'suspended' && (
+                      <button
+                        onClick={() => suspend(b.id, b.display_name)}
+                        disabled={actionId === b.id}
+                        style={{ background: '#f44', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}
+                      >
+                        Suspend
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Listings Review Tab
+// ---------------------------------------------------------------------------
+function ListingsReviewTab({ secret }) {
+  const [listings, setListings] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [actionId, setActionId] = useState(null)
+
+  const load = () => {
+    setLoading(true)
+    adminAPI.getPendingListings(secret)
+      .then(d => setListings(d.listings || []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, [])
+
+  const approve = async (id) => {
+    setActionId(id)
+    try { await adminAPI.approveListing(id, secret); load() }
+    catch (e) { alert(e.response?.data?.detail || 'Error') }
+    finally { setActionId(null) }
+  }
+
+  const reject = async (id) => {
+    const note = prompt('Reason for rejection?')
+    if (note === null) return
+    setActionId(id)
+    try { await adminAPI.rejectListing(id, note, secret); load() }
+    catch (e) { alert(e.response?.data?.detail || 'Error') }
+    finally { setActionId(null) }
+  }
+
+  return (
+    <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 20px' }}>
+      <h2 style={{ margin: '0 0 20px', color: '#fff' }}>Pending Listings ({listings.length})</h2>
+      {loading ? <p style={{ color: '#888' }}>Loading…</p> : listings.length === 0 ? (
+        <p style={{ color: '#888' }}>No listings pending review.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {listings.map(l => (
+            <div key={l.id} style={{ background: '#111', border: '1px solid #2a2a2a', borderRadius: 14, padding: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                <div>
+                  <h3 style={{ margin: '0 0 4px', color: '#fff', fontSize: 16 }}>{l.title}</h3>
+                  <p style={{ margin: 0, color: '#888', fontSize: 13 }}>
+                    By: <strong style={{ color: '#aaa' }}>{l.broker_name}</strong> ({l.broker_city}) ·
+                    {l.locality}, {l.city} · ₹{l.monthly_rent?.toLocaleString('en-IN')}/mo
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => approve(l.id)}
+                    disabled={actionId === l.id}
+                    style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => reject(l.id)}
+                    disabled={actionId === l.id}
+                    style={{ background: '#f44', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+
+              {/* Details grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px,1fr))', gap: 8, marginBottom: 10 }}>
+                {[
+                  ['Type', l.property_type],
+                  ['Furnishing', l.furnishing?.replace(/_/g, ' ')],
+                  ['Beds total/avail', `${l.total_beds || '?'}/${l.available_beds || '?'}`],
+                  ['Deposit', l.deposit ? `₹${l.deposit.toLocaleString('en-IN')}` : '—'],
+                  ['Gender pref', l.gender_preference || 'Any'],
+                  ['Available from', l.available_from || '—'],
+                ].map(([k, v]) => v && (
+                  <div key={k} style={{ background: '#1a1a1a', borderRadius: 6, padding: '6px 10px' }}>
+                    <span style={{ fontSize: 11, color: '#666', display: 'block' }}>{k}</span>
+                    <span style={{ fontSize: 13, color: '#aaa' }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+
+              {l.description && (
+                <p style={{ margin: '0 0 8px', fontSize: 13, color: '#888', lineHeight: 1.6 }}>{l.description}</p>
+              )}
+              {l.full_address && (
+                <p style={{ margin: 0, fontSize: 12, color: '#666' }}>📍 {l.full_address}</p>
+              )}
+              {l.amenities?.length > 0 && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                  {l.amenities.map((a, i) => (
+                    <span key={i} style={{ background: '#2a2a2a', color: '#888', borderRadius: 4, padding: '2px 8px', fontSize: 11 }}>{a}</span>
+                  ))}
+                </div>
+              )}
+              {l.photos?.length > 0 && (
+                <div style={{ display: 'flex', gap: 8, marginTop: 10, overflowX: 'auto' }}>
+                  {l.photos.slice(0, 4).map((p, i) => (
+                    <img key={i} src={p} alt="" style={{ height: 80, width: 110, objectFit: 'cover', borderRadius: 6 }}
+                      onError={e => { e.target.style.display = 'none' }} />
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+

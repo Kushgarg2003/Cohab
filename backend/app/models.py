@@ -347,6 +347,116 @@ class WishlistVote(Base):
     item = relationship("WishlistItem", back_populates="votes")
 
 
+# ========== Broker Listings ==========
+
+class BrokerStatus(str, enum.Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    SUSPENDED = "suspended"
+
+class ListingStatus(str, enum.Enum):
+    DRAFT = "draft"
+    PENDING_REVIEW = "pending_review"
+    LIVE = "live"
+    PAUSED = "paused"
+    ARCHIVED = "archived"
+
+class PropertyType(str, enum.Enum):
+    PG = "pg"
+    FLAT = "flat"
+    ROOM_IN_FLAT = "room_in_flat"
+
+class FurnishingType(str, enum.Enum):
+    FULLY_FURNISHED = "fully_furnished"
+    SEMI_FURNISHED = "semi_furnished"
+    UNFURNISHED = "unfurnished"
+
+class InquiryStatus(str, enum.Enum):
+    OPEN = "open"
+    CLOSED = "closed"
+
+class InquiryMessageSender(str, enum.Enum):
+    USER = "user"
+    BROKER = "broker"
+
+
+class Broker(Base):
+    __tablename__ = "brokers"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String(255), unique=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    display_name = Column(String(100), nullable=False)
+    phone = Column(String(20), nullable=True)  # NEVER exposed in user-facing API
+    city = Column(String(100), nullable=True)
+    status = Column(SQLEnum(BrokerStatus), nullable=False, default=BrokerStatus.PENDING)
+    admin_note = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    listings = relationship("Listing", back_populates="broker", cascade="all, delete-orphan")
+
+
+class Listing(Base):
+    __tablename__ = "listings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    broker_id = Column(UUID(as_uuid=True), ForeignKey("brokers.id"), nullable=False)
+    title = Column(String(255), nullable=False)
+    description = Column(String(3000), nullable=True)
+    property_type = Column(SQLEnum(PropertyType), nullable=False)
+    furnishing = Column(SQLEnum(FurnishingType), nullable=True)
+    city = Column(String(100), nullable=False)
+    locality = Column(String(255), nullable=False)
+    full_address = Column(String(500), nullable=True)  # hidden from users in MVP
+    monthly_rent = Column(Integer, nullable=False)
+    deposit = Column(Integer, nullable=True)
+    maintenance = Column(Integer, nullable=True)
+    total_beds = Column(Integer, nullable=True)
+    available_beds = Column(Integer, nullable=True)
+    gender_preference = Column(SQLEnum(GenderPreference), nullable=True)
+    amenities = Column(JSON, nullable=True)   # list of strings
+    rules = Column(JSON, nullable=True)       # list of strings
+    photos = Column(JSON, nullable=True)      # list of URL strings
+    status = Column(SQLEnum(ListingStatus), nullable=False, default=ListingStatus.DRAFT)
+    admin_note = Column(String(500), nullable=True)
+    available_from = Column(Date, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    broker = relationship("Broker", back_populates="listings")
+    inquiries = relationship("ListingInquiry", back_populates="listing", cascade="all, delete-orphan")
+
+
+class ListingInquiry(Base):
+    __tablename__ = "listing_inquiries"
+    __table_args__ = (UniqueConstraint("listing_id", "user_id", name="uq_inquiry_user_listing"),)
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    listing_id = Column(UUID(as_uuid=True), ForeignKey("listings.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    status = Column(SQLEnum(InquiryStatus), nullable=False, default=InquiryStatus.OPEN)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    listing = relationship("Listing", back_populates="inquiries")
+    user = relationship("User")
+    messages = relationship("InquiryMessage", back_populates="inquiry", cascade="all, delete-orphan")
+
+
+class InquiryMessage(Base):
+    __tablename__ = "inquiry_messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    inquiry_id = Column(UUID(as_uuid=True), ForeignKey("listing_inquiries.id"), nullable=False)
+    sender_role = Column(SQLEnum(InquiryMessageSender), nullable=False)
+    sender_id = Column(UUID(as_uuid=True), nullable=False)
+    content = Column(String(3000), nullable=False)
+    flagged = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    inquiry = relationship("ListingInquiry", back_populates="messages")
+
+
 # ========== Email Logs ==========
 
 class EmailLog(Base):

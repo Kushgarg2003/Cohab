@@ -6,7 +6,8 @@ from app.database import get_db, settings
 from app.models import (User, SurveyResponse, MatchScore, MutualMatch,
                         UserSwipe, SwipeAction, GroupMember, Group, Message,
                         KitItem, KitDebt, WishlistItem, WishlistVote, GroupInvitation,
-                        UserGender, PetPreference, DietaryPreference, GenderPreference)
+                        UserGender, PetPreference, DietaryPreference, GenderPreference,
+                        Broker, BrokerStatus, Listing, ListingStatus, ListingInquiry)
 from app.schemas import APIResponse
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -593,3 +594,175 @@ def delete_user(user_id: str, db: Session = Depends(get_db), _: None = Depends(v
         data={},
         message=f"User {user_id} deleted. They can re-join with the same Google account."
     )
+
+
+# ---------------------------------------------------------------------------
+# Broker management
+# ---------------------------------------------------------------------------
+
+@router.get("/brokers", response_model=APIResponse)
+def list_brokers(
+    status: str = None,
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    q = db.query(Broker)
+    if status:
+        try:
+            q = q.filter(Broker.status == BrokerStatus(status))
+        except ValueError:
+            pass
+    brokers = q.order_by(Broker.created_at.desc()).all()
+
+    result = []
+    for b in brokers:
+        listing_count = db.query(Listing).filter(Listing.broker_id == b.id).count()
+        result.append({
+            "id": str(b.id),
+            "email": b.email,
+            "display_name": b.display_name,
+            "phone": b.phone,
+            "city": b.city,
+            "status": b.status.value,
+            "admin_note": b.admin_note,
+            "listing_count": listing_count,
+            "created_at": b.created_at.isoformat(),
+        })
+
+    return APIResponse(status="success", data={"brokers": result}, message=f"{len(result)} brokers")
+
+
+@router.patch("/brokers/{broker_id}/approve", response_model=APIResponse)
+def approve_broker(
+    broker_id: str,
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    try:
+        uid = UUID(broker_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid broker_id")
+
+    broker = db.query(Broker).filter(Broker.id == uid).first()
+    if not broker:
+        raise HTTPException(status_code=404, detail="Broker not found")
+
+    broker.status = BrokerStatus.APPROVED
+    broker.admin_note = None
+    db.commit()
+    return APIResponse(status="success", data={"status": "approved"}, message="Broker approved")
+
+
+@router.patch("/brokers/{broker_id}/suspend", response_model=APIResponse)
+def suspend_broker(
+    broker_id: str,
+    payload: dict = {},
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    try:
+        uid = UUID(broker_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid broker_id")
+
+    broker = db.query(Broker).filter(Broker.id == uid).first()
+    if not broker:
+        raise HTTPException(status_code=404, detail="Broker not found")
+
+    broker.status = BrokerStatus.SUSPENDED
+    broker.admin_note = payload.get("note") or "Suspended by admin"
+
+    # Pause all their live listings
+    db.query(Listing).filter(
+        Listing.broker_id == uid,
+        Listing.status == ListingStatus.LIVE,
+    ).update({"status": ListingStatus.PAUSED})
+
+    db.commit()
+    return APIResponse(status="success", data={"status": "suspended"}, message="Broker suspended and listings paused")
+
+
+# ---------------------------------------------------------------------------
+# Listing review
+# ---------------------------------------------------------------------------
+
+@router.get("/listings/pending", response_model=APIResponse)
+def list_pending_listings(
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    listings = db.query(Listing).filter(
+        Listing.status == ListingStatus.PENDING_REVIEW
+    ).order_by(Listing.updated_at.asc()).all()
+
+    result = []
+    for l in listings:
+        broker = db.query(Broker).filter(Broker.id == l.broker_id).first()
+        result.append({
+            "id": str(l.id),
+            "broker_id": str(l.broker_id),
+            "broker_name": broker.display_name if broker else None,
+            "broker_city": broker.city if broker else None,
+            "title": l.title,
+            "description": l.description,
+            "property_type": l.property_type.value if l.property_type else None,
+            "furnishing": l.furnishing.value if l.furnishing else None,
+            "city": l.city,
+            "locality": l.locality,
+            "full_address": l.full_address,
+            "monthly_rent": l.monthly_rent,
+            "deposit": l.deposit,
+            "total_beds": l.total_beds,
+            "available_beds": l.available_beds,
+            "gender_preference": l.gender_preference.value if l.gender_preference else None,
+            "amenities": l.amenities or [],
+            "rules": l.rules or [],
+            "photos": l.photos or [],
+            "available_from": l.available_from.isoformat() if l.available_from else None,
+            "created_at": l.created_at.isoformat(),
+        })
+
+    return APIResponse(status="success", data={"listings": result}, message=f"{len(result)} pending listings")
+
+
+@router.patch("/listings/{listing_id}/approve", response_model=APIResponse)
+def approve_listing(
+    listing_id: str,
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    try:
+        uid = UUID(listing_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid listing_id")
+
+    listing = db.query(Listing).filter(Listing.id == uid).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+
+    listing.status = ListingStatus.LIVE
+    listing.admin_note = None
+    db.commit()
+    return APIResponse(status="success", data={"status": "live"}, message="Listing approved and live")
+
+
+@router.patch("/listings/{listing_id}/reject", response_model=APIResponse)
+def reject_listing(
+    listing_id: str,
+    payload: dict = {},
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+):
+    try:
+        uid = UUID(listing_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid listing_id")
+
+    listing = db.query(Listing).filter(Listing.id == uid).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+
+    listing.status = ListingStatus.DRAFT
+    listing.admin_note = payload.get("note") or "Rejected by admin"
+    db.commit()
+    return APIResponse(status="success", data={"status": "draft"}, message="Listing rejected, moved back to draft")
